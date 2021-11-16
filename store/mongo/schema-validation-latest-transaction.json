@@ -1,0 +1,19 @@
+{
+  "bsonType": "object",
+  "required": ["balance"],
+  "properties": {
+    "balance": {
+      "bsonType": "double",
+      "description": "as inc operation we should get positive or negative incrementation",
+      "minimum": 0.0
+    },
+    "pincoinsAllSum": {
+      "bsonType": ["double"],
+      "minimum": 0.0
+    },
+    "depositAllSum": {
+      "bsonType": ["double"],
+      "minimum": 0.0
+    }
+  }
+}
