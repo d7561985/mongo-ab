@@ -1,4 +1,4 @@
-port=27022
+port=27021
 instance=1
 
 # example: make start port=27019 instance=2
@@ -9,5 +9,3 @@ start:
 # init replica
 init:
 	mongosh --port $(port) --eval "printjson(rs.initiate())" --quiet
-
-
