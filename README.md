@@ -11,18 +11,16 @@ Mongo >= 3.6 installed with replica set. For custom launch look into Makefile co
 ## How to
 Just be sure that you specify launch url
 
-[source]
 store/mongo/mongo_test.go
----
+```
 var dbConnect = "mongodb://localhost:27021/?replicaSet=rs1"
----
+```
 
 ## Tests
 ### `TestLoadMakeTransaction`
 This most important. It calculates actual rpc and show it
 Example: 
 
-[source]
----
+```
 comb/sec: 7669.716911777314 duration: 60.017860541 15344
----
+```
