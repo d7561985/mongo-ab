@@ -78,7 +78,7 @@ func (r *Repo) setup(ctx context.Context) (*Repo, error) {
 		return nil, errors.WithStack(err)
 	}
 
-	list, err := r.db.ListCollectionNames(ctx, bson.D{{"name", r.LatestC}})
+	list, err := r.db.ListCollectionNames(ctx, bson.D{{Key: "name", Value: r.LatestC}})
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -101,10 +101,10 @@ func (r *Repo) setup(ctx context.Context) (*Repo, error) {
 	} else {
 		// spec: https://docs.mongodb.com/manual/reference/command/collMod/#mongodb-dbcommand-dbcmd.collMod
 		res := r.db.RunCommand(ctx, bson.D{
-			{"collMod", bsonx.String(r.LatestC)},
-			{"validationLevel", bsonx.String("off")},
-			{"validationAction", bsonx.String("error")},
-			{"validator", bson.M{"$jsonSchema": doc}},
+			{Key: "collMod", Value: bsonx.String(r.LatestC)},
+			{Key: "validationLevel", Value: bsonx.String("off")},
+			{Key: "validationAction", Value: bsonx.String("error")},
+			{Key: "validator", Value: bson.M{"$jsonSchema": doc}},
 		})
 		if res.Err() != nil {
 			return nil, errors.WithStack(res.Err())
@@ -118,13 +118,20 @@ func (r *Repo) Upsert(ctx context.Context, tx Transaction) (*TransactionInc, err
 	op := options.FindOneAndUpdate().SetUpsert(true).
 		SetReturnDocument(options.After)
 
-	filter := bson.D{{"_id", tx.AccountID}}
+	filter := bson.D{{Key: "_id", Value: tx.AccountID}}
 	res := r.db.Collection(r.LatestC).FindOneAndUpdate(ctx, filter,
 		bson.D{
-			// if only insert
-			{"$setOnInsert", bson.D{{"_id", tx.AccountID}, {"accountId", tx.AccountID}}},
-			// increment operation
-			{"$inc", tx.TransactionInc},
+			{
+				// if only insert
+				Key: "$setOnInsert",
+				Value: bson.D{
+					{Key: "_id", Value: tx.AccountID},
+					{Key: "accountId", Value: tx.AccountID},
+				}},
+			{
+				// increment operation
+				Key: "$inc", Value: tx.TransactionInc,
+			},
 		}, op)
 
 	switch err := res.Err(); err {

@@ -218,7 +218,7 @@ func TestComplianceBillingHandler(t *testing.T) {
 	q, _ := New(dbConnect, "demo", "XXX", "YYY")
 	res := q.db.Collection("XXX").FindOne(
 		context.TODO(),
-		bson.D{{"_id", user}},
+		bson.D{{Key: "_id", Value: user}},
 	)
 	assert.NoError(t, res.Err())
 
