@@ -8,4 +8,4 @@ start:
 
 # init replica
 init:
-	mongosh --port $(port) --eval "printjson(rs.initiate())" --quiet
+	mongosh --port $(port) --quiet ./data/replica-init.js
