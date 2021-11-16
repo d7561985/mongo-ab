@@ -3,8 +3,9 @@ package mongo
 import (
 	"context"
 	"log"
-	"my/pkg/changing"
 	"time"
+
+	"github.com/d7561985/mongo-ab/pkg/changing"
 
 	_ "embed"
 

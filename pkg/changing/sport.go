@@ -2,7 +2,8 @@ package changing
 
 import (
 	"math"
-	"my/pkg/agregate/transaction"
+
+	"github.com/d7561985/mongo-ab/pkg/agregate/transaction"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )

@@ -1,4 +1,4 @@
-module my
+module github.com/d7561985/mongo-ab
 
 go 1.17
 

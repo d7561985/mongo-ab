@@ -1,8 +1,9 @@
 package mongo
 
 import (
-	"my/pkg/changing"
 	"time"
+
+	"github.com/d7561985/mongo-ab/pkg/changing"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )

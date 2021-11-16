@@ -4,10 +4,11 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
-	"my/pkg/changing"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/d7561985/mongo-ab/pkg/changing"
 
 	fuzz "github.com/google/gofuzz"
 	"github.com/pkg/errors"

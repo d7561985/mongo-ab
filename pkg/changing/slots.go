@@ -1,8 +1,9 @@
 package changing
 
 import (
-	"my/pkg/agregate/transaction"
 	"time"
+
+	"github.com/d7561985/mongo-ab/pkg/agregate/transaction"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
