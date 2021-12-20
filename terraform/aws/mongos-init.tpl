@@ -1,3 +1,4 @@
-%{ for id, host in val }
+%{ for id, host in val ~}
 sh.addShard( "${id}/${host}:27017")
-%{ endfor }
+%{ endfor ~}
+sh.enableSharding("${shardDB}")

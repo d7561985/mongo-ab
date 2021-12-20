@@ -158,6 +158,7 @@ resource "null_resource" "upload_mongos" {
     destination = local.initJs
     content     = templatefile("${path.module}/mongos-init.tpl", {
       val : data.terraform_remote_state.init.outputs.public_ip
+      shardDB: var.shardDB
     })
 
     connection {
@@ -195,7 +196,6 @@ resource "null_resource" "upload_mongos" {
 }
 
 resource "null_resource" "execute_mongos" {
-  count = 0
   provisioner "remote-exec" {
     inline = [
       "sudo cp /home/ec2-user/mongod.conf /etc/mongod.conf",
