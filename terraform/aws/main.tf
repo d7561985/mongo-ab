@@ -27,9 +27,7 @@ data "terraform_remote_state" "init" {
 
 locals {
   initJs = "/home/ec2-user/init.js"
-}
 
-locals {
   cfg = merge(
   {for id, host in data.terraform_remote_state.init.outputs.public_ip :id => {
     host : host,
@@ -126,4 +124,95 @@ resource "null_resource" "execute" {
   }
 
   depends_on = [null_resource.upload_instances]
+}
+
+# mongos part
+resource "null_resource" "upload_mongos" {
+  provisioner "file" {
+    source      = "${path.module}/mongos.service"
+    destination = "/home/ec2-user/mongos.service"
+
+    connection {
+      type  = "ssh"
+      user  = "ec2-user"
+      host  = data.terraform_remote_state.init.outputs.mongos_ip
+      agent = true
+    }
+  }
+
+  provisioner "file" {
+    destination = "/home/ec2-user/mongod.conf"
+    content     = templatefile("${path.module}/mongos.tpl", {
+      configDB : "rs0/${data.terraform_remote_state.init.outputs.config_ip}:27017"
+    })
+
+    connection {
+      type  = "ssh"
+      user  = "ec2-user"
+      host  = data.terraform_remote_state.init.outputs.mongos_ip
+      agent = true
+    }
+  }
+
+  provisioner "file" {
+    destination = local.initJs
+    content     = templatefile("${path.module}/mongos-init.tpl", {
+      val : data.terraform_remote_state.init.outputs.public_ip
+    })
+
+    connection {
+      type  = "ssh"
+      user  = "ec2-user"
+      host  = data.terraform_remote_state.init.outputs.mongos_ip
+      agent = true
+    }
+  }
+
+  provisioner "file" {
+    source      = "${path.module}/mongo.sh"
+    destination = "/home/ec2-user/mongo.sh"
+
+    connection {
+      type  = "ssh"
+      user  = "ec2-user"
+      host  = data.terraform_remote_state.init.outputs.mongos_ip
+      agent = true
+    }
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "sudo chmod 0700 ./mongo.sh", "sudo ./mongo.sh",
+    ]
+
+    connection {
+      type  = "ssh"
+      user  = "ec2-user"
+      host  = data.terraform_remote_state.init.outputs.mongos_ip
+      agent = true
+    }
+  }
+}
+
+resource "null_resource" "execute_mongos" {
+  count = 0
+  provisioner "remote-exec" {
+    inline = [
+      "sudo cp /home/ec2-user/mongod.conf /etc/mongod.conf",
+      "sudo cp /home/ec2-user/mongos.service /etc/systemd/system/mongos.service",
+      "sudo systemctl start mongos",
+      "sudo systemctl status mongos",
+      # init replicaset
+      "mongosh  --quiet ${local.initJs}"
+    ]
+
+    connection {
+      type  = "ssh"
+      user  = "ec2-user"
+      host  = data.terraform_remote_state.init.outputs.mongos_ip
+      agent = true
+    }
+  }
+
+  depends_on = [null_resource.execute]
 }

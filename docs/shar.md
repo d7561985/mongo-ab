@@ -29,8 +29,8 @@ rs.initiate( { _id : "rs0",  configsvr: true,  members: [{ _id: 0, host: "localh
 
 # start mongos
 ```bash
-mongos --port 40000 --configdb rs0/localhost:27020,localhost:27019,localhost:27018
-mongo --port 40000
+mongos --port 40000 --bind_ip_all --configdb rs0/localhost:27020,localhost:27019,localhost:27018
+mongo --port 40000 
 
 sh.addShard( "rs1/3.122.244.130:27017")
 sh.addShard( "rs2/3.121.112.233:27017")

@@ -21,6 +21,11 @@ data "aws_subnet" "default" {
   vpc_id            = data.aws_vpc.default.id
 }
 
+data "aws_subnet" "b" {
+  availability_zone = "${var.AWS_REGION}b"
+  vpc_id            = data.aws_vpc.default.id
+}
+
 # MongoDB security group
 resource "aws_security_group" "mongodb" {
   name        = "mongodb-${var.ENVIRONMENT}"
@@ -83,29 +88,15 @@ resource "aws_launch_template" "mongo" {
   image_id      = data.aws_ami.mongo_ami.id
   ebs_optimized = false
 
-  dynamic "instance_market_options" {
-    for_each = []
-
-    content {
-      market_type = "spot"
-      spot_options {
-        max_price = var.SPOT_PRICE
-      }
+  instance_market_options {
+    market_type = "spot"
+    spot_options {
+      max_price = var.SPOT_PRICE
     }
   }
-  #  instance_market_options {
-  #    market_type = "spot"
-  #    spot_options {
-  #      max_price = var.SPOT_PRICE
-  #    }
-  #  }
 
   monitoring {
     enabled = true
-  }
-
-  placement {
-    availability_zone = "${var.AWS_REGION}a"
   }
 
   tag_specifications {
@@ -122,9 +113,9 @@ resource "aws_launch_template" "mongo" {
 resource "aws_instance" "mongo" {
   for_each = var.names
 
-  availability_zone = "${var.AWS_REGION}a"
-  subnet_id         = data.aws_subnet.default.id
-  security_groups   = [aws_security_group.mongodb.id]
+  #  availability_zone = "${var.AWS_REGION}a"
+  subnet_id       = data.aws_subnet.default.id
+  security_groups = [aws_security_group.mongodb.id]
 
   launch_template {
     id      = aws_launch_template.mongo.id
@@ -133,7 +124,7 @@ resource "aws_instance" "mongo" {
 
   depends_on = [aws_launch_template.mongo]
 
-  root_block_device{
+  root_block_device {
     volume_size = 100
     volume_type = "gp2"
   }
@@ -142,9 +133,11 @@ resource "aws_instance" "mongo" {
 }
 
 resource "aws_instance" "config" {
-  availability_zone = "${var.AWS_REGION}a"
-  subnet_id         = data.aws_subnet.default.id
-  security_groups   = [aws_security_group.mongodb.id]
+  instance_type = "t2.small"
+
+  #  availability_zone = "${var.AWS_REGION}a"
+  subnet_id       = data.aws_subnet.b.id
+  security_groups = [aws_security_group.mongodb.id]
 
   launch_template {
     id      = aws_launch_template.mongo.id
@@ -153,10 +146,40 @@ resource "aws_instance" "config" {
 
   depends_on = [aws_launch_template.mongo]
 
-  root_block_device{
+  root_block_device {
     volume_size = 8
     volume_type = "gp2"
   }
 
   user_data_base64 = filebase64("${path.module}/mongo.sh")
+
+  tags = {
+    Name = "${var.ENVIRONMENT}-mongo-config"
+  }
+}
+
+resource "aws_instance" "mongos" {
+  instance_type = "t2.small"
+
+  #  availability_zone = "${var.AWS_REGION}a"
+  subnet_id       = data.aws_subnet.b.id
+  security_groups = [aws_security_group.mongodb.id]
+
+  launch_template {
+    id      = aws_launch_template.mongo.id
+    version = aws_launch_template.mongo.latest_version
+  }
+
+  depends_on = [aws_launch_template.mongo]
+
+  root_block_device {
+    volume_size = 8
+    volume_type = "gp2"
+  }
+
+  user_data_base64 = filebase64("${path.module}/mongo.sh")
+
+  tags = {
+    Name = "${var.ENVIRONMENT}-mongos"
+  }
 }

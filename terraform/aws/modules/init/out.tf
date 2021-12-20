@@ -5,3 +5,7 @@ output "public_ip" {
 output "config_ip" {
   value = aws_instance.config.public_ip
 }
+
+output "mongos_ip" {
+  value = aws_instance.mongos.public_ip
+}
