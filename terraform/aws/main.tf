@@ -12,30 +12,30 @@ provider "aws" {
   region = "eu-central-1"
 }
 
-#module "init" {
-#  source = "./modules/init"
-#}
-
-
-data "terraform_remote_state" "init" {
-  backend = "local"
-
-  config = {
-    path = "./modules/init/terraform.tfstate"
-  }
+module "init" {
+  source = "./modules/init"
 }
+
+
+#data "terraform_remote_state" "init" {
+#  backend = "local"
+#
+#  config = {
+#    path = "./modules/init/terraform.tfstate"
+#  }
+#}
 
 locals {
   initJs = "/home/ec2-user/init.js"
 
   cfg = merge(
-  {for id, host in data.terraform_remote_state.init.outputs.public_ip :id => {
+  {for id, host in module.init.public_ip :id => {
     host : host,
     clusterRole : "shardsvr",
   }},
   {
     "rs0" : {
-      host : data.terraform_remote_state.init.outputs.config_ip
+      host : module.init.config_ip
       clusterRole : "configsvr",
     }
   },
@@ -135,7 +135,7 @@ resource "null_resource" "upload_mongos" {
     connection {
       type  = "ssh"
       user  = "ec2-user"
-      host  = data.terraform_remote_state.init.outputs.mongos_ip
+      host  = module.init.mongos_ip
       agent = true
     }
   }
@@ -143,13 +143,13 @@ resource "null_resource" "upload_mongos" {
   provisioner "file" {
     destination = "/home/ec2-user/mongod.conf"
     content     = templatefile("${path.module}/mongos.tpl", {
-      configDB : "rs0/${data.terraform_remote_state.init.outputs.config_ip}:27017"
+      configDB : "rs0/${module.init.config_ip}:27017"
     })
 
     connection {
       type  = "ssh"
       user  = "ec2-user"
-      host  = data.terraform_remote_state.init.outputs.mongos_ip
+      host  = module.init.mongos_ip
       agent = true
     }
   }
@@ -157,14 +157,14 @@ resource "null_resource" "upload_mongos" {
   provisioner "file" {
     destination = local.initJs
     content     = templatefile("${path.module}/mongos-init.tpl", {
-      val : data.terraform_remote_state.init.outputs.public_ip
+      val : module.init.public_ip
       shardDB: var.shardDB
     })
 
     connection {
       type  = "ssh"
       user  = "ec2-user"
-      host  = data.terraform_remote_state.init.outputs.mongos_ip
+      host  = module.init.mongos_ip
       agent = true
     }
   }
@@ -176,7 +176,7 @@ resource "null_resource" "upload_mongos" {
     connection {
       type  = "ssh"
       user  = "ec2-user"
-      host  = data.terraform_remote_state.init.outputs.mongos_ip
+      host  = module.init.mongos_ip
       agent = true
     }
   }
@@ -189,7 +189,7 @@ resource "null_resource" "upload_mongos" {
     connection {
       type  = "ssh"
       user  = "ec2-user"
-      host  = data.terraform_remote_state.init.outputs.mongos_ip
+      host  = module.init.mongos_ip
       agent = true
     }
   }
@@ -209,7 +209,7 @@ resource "null_resource" "execute_mongos" {
     connection {
       type  = "ssh"
       user  = "ec2-user"
-      host  = data.terraform_remote_state.init.outputs.mongos_ip
+      host  = module.init.mongos_ip
       agent = true
     }
   }
