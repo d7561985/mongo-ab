@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/d7561985/mongo-ab/pkg/changing"
-
 	fuzz "github.com/google/gofuzz"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -18,7 +17,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-var dbConnect = "mongodb://localhost:27021/?replicaSet=rs1"
+var dbConnect = "mongodb://18.194.42.137:27017"
 
 // /opt/homebrew/Cellar/mongodb-community/5.0.3/bin/mongod --port 27021 --replSet rs1 --dbpath data/data1 --bind_ip localhost -f  /opt/homebrew/etc/mongod.conf
 // cat /opt/homebrew/etc/mongod.conf
@@ -41,7 +40,7 @@ func TestLoadMakeTransaction(t *testing.T) {
 	i := 0
 	const X = 30
 
-	q, err := New(dbConnect, "demo", "XXX3", "YYY3")
+	q, err := New(dbConnect, "db", "balance", "journal")
 	require.NoError(t, err)
 
 	start := time.Now()

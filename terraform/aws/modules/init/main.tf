@@ -126,7 +126,9 @@ resource "aws_instance" "mongo" {
 
   root_block_device {
     volume_size = 100
-    volume_type = "gp2"
+    volume_type = "gp3"
+    iops = 16000
+    throughput= 250
   }
 
   user_data_base64 = filebase64("${path.module}/mongo.sh")

@@ -13,8 +13,11 @@ systemLog:
 # Where and how to store data.
 storage:
   dbPath: /var/lib/mongo
+  directoryPerDB: true
   journal:
     enabled: true
+    commitIntervalMs: 500
+
 #  engine:
 #  wiredTiger:
 

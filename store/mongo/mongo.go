@@ -2,7 +2,9 @@ package mongo
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/d7561985/mongo-ab/pkg/changing"
@@ -65,9 +67,38 @@ func New(addr string, db, balance, journal string) (*Repo, error) {
 }
 
 func (r *Repo) setup(ctx context.Context) (*Repo, error) {
+	// sharding enable
+	lc := fmt.Sprintf("%s.%s", r.db.Name(), r.LatestC)
+	res := r.client.Database("admin").RunCommand(ctx, bson.D{
+		bson.E{Key: "shardCollection", Value: bsonx.String(lc)},
+		// user hashed
+		{Key: "key", Value: bson.D{{"_id", bsonx.String("hashed")}}},
+		//
+		{Key: "numInitialChunks", Value: bsonx.Int64(8192*3 - 3)},
+		//
+		//{Key: "presplitHashedZones", Value: bsonx.Boolean(true)},
+	})
+	if res.Err() != nil && !strings.Contains(res.Err().Error(), "AlreadyInitialized") {
+		return nil, errors.WithStack(res.Err())
+	}
+
+	jc := fmt.Sprintf("%s.%s", r.db.Name(), r.JournalC)
+	res = r.client.Database("admin").RunCommand(ctx, bson.D{
+		{Key: "shardCollection", Value: bsonx.String(jc)},
+		//
+		{Key: "key", Value: bson.D{{Key: "accountId", Value: 1}}},
+		//{Key: "numInitialChunks", Value: bsonx.Int64(8192*3 - 3)},
+		//
+		//{Key: "presplitHashedZones", Value: bsonx.Boolean(true)},
+	})
+
+	if res.Err() != nil && !strings.Contains(res.Err().Error(), "AlreadyInitialized") {
+		return nil, errors.WithStack(res.Err())
+	}
+
 	// journal index
 	if _, err := r.db.Collection(r.JournalC).Indexes().CreateOne(ctx, mongo.IndexModel{
-		Keys:    bson.D{bson.E{Key: "accountId", Value: -1}},
+		Keys:    bson.D{bson.E{Key: "accountId", Value: 1}},
 		Options: options.Index(),
 	}); err != nil {
 		return nil, errors.WithStack(err)
