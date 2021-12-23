@@ -123,7 +123,7 @@ resource "aws_launch_template" "mongo" {
 resource "aws_instance" "mongo" {
   for_each = var.names
 
-  instance_type = "%{if var.useNvME}i3en.large%{else}t3.medium%{endif}"
+  instance_type = "%{if var.useNvME}${var.MONGOD_INSTANCE}%{else}t3.medium%{endif}"
 
   #  ephemeral_block_device {
   #    device_name  = "nvme0n1"

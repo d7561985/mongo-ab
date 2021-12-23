@@ -15,6 +15,10 @@ provider "aws" {
 module "init" {
   source = "./modules/init"
   useNvME = var.useNvME
+
+  # commit to back in  i3en.large
+  MONGOD_INSTANCE = "i3en.xlarge" // 4CPU + 32GB RAM
+  SPOT_PRICE = "0.3"
 }
 
 
@@ -43,6 +47,27 @@ locals {
     }
   },
   )
+}
+
+resource "null_resource" "init_ssd" {
+  for_each =  module.init.public_ip
+
+  connection {
+    type  = "ssh"
+    user  = "ec2-user"
+    host  = each.value
+    agent = true
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "sudo mkdir /data",
+
+      # mount ssd
+      "sudo mkfs -t xfs /dev/nvme0n1",
+      "sudo mount /dev/nvme0n1 /data",
+    ]
+  }
 }
 
 resource "null_resource" "upload_instances" {
@@ -79,11 +104,7 @@ resource "null_resource" "upload_instances" {
 
   provisioner "remote-exec" {
     inline = [
-      "sudo mkdir /data",
-
-      # mount ssd
-      "sudo mkfs -t xfs /dev/nvme0n1",
-      "sudo mount /dev/nvme0n1 /data",
+      "sudo mkdir -p /data", # for config server
 
       # setup mongo server
       "sudo chmod 0700 ./mongo.sh", "sudo ./mongo.sh",
@@ -104,7 +125,7 @@ resource "null_resource" "execute" {
       "sudo systemctl start mongod",
       "sudo systemctl status mongod",
       # init replicaset
-      "mongosh  --quiet ${local.initJs}"
+      "mongosh --port 50000 --quiet ${local.initJs}"
     ]
 
     connection {
@@ -135,7 +156,7 @@ resource "null_resource" "upload_mongos" {
   provisioner "file" {
     destination = "/home/ec2-user/mongod.conf"
     content     = templatefile("${path.module}/mongos.tpl", {
-      configDB : "rs0/${module.init.config_ip}:27017"
+      configDB : "rs0/${module.init.config_ip}:50000"
     })
   }
 
@@ -167,7 +188,7 @@ resource "null_resource" "execute_mongos" {
       "sudo systemctl start mongos",
       "sudo systemctl status mongos",
       # init replicaset
-      "mongosh  --quiet ${local.initJs}"
+      "mongosh --port 50000 --quiet ${local.initJs}"
     ]
 
     connection {

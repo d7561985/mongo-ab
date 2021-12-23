@@ -36,3 +36,8 @@ variable "useNvME" {
   type = bool
   default = true
 }
+
+variable "MONGOD_INSTANCE" {
+  type = string
+  default = "i3en.large"
+}
