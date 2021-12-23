@@ -66,7 +66,7 @@ resource "aws_security_group_rule" "mongodb_mongodb" {
   from_port   = 27017
   to_port     = 27017
   protocol    = "tcp"
-  cidr_blocks = ["0.0.0.0/0"]
+  cidr_blocks = [data.aws_vpc.default.cidr_block]
 
   security_group_id = aws_security_group.mongodb.id
 }
@@ -76,8 +76,18 @@ resource "aws_security_group_rule" "mongodb_mongodb_replication" {
   from_port   = 27019
   to_port     = 27019
   protocol    = "tcp"
-  cidr_blocks = ["0.0.0.0/0"]
+  cidr_blocks = [data.aws_vpc.default.cidr_block]
 
+  security_group_id = aws_security_group.mongodb.id
+}
+
+resource "aws_security_group_rule" "mongodb_mongos" {
+  type              = "ingress"
+  description       = "mongos on 50000 port"
+  from_port         = 50000
+  to_port           = 50000
+  protocol          = "tcp"
+  cidr_blocks       = ["0.0.0.0/0"]
   security_group_id = aws_security_group.mongodb.id
 }
 
@@ -113,6 +123,13 @@ resource "aws_launch_template" "mongo" {
 resource "aws_instance" "mongo" {
   for_each = var.names
 
+  instance_type = "%{if var.useNvME}i3en.large%{else}t3.medium%{endif}"
+
+  #  ephemeral_block_device {
+  #    device_name  = "nvme0n1"
+  #    virtual_name = "ephemeral0"
+  #  }
+
   #  availability_zone = "${var.AWS_REGION}a"
   subnet_id       = data.aws_subnet.default.id
   security_groups = [aws_security_group.mongodb.id]
@@ -127,8 +144,8 @@ resource "aws_instance" "mongo" {
   root_block_device {
     volume_size = 100
     volume_type = "gp3"
-    iops = 16000
-    throughput= 250
+    iops        = 16000
+    throughput  = 250
   }
 
   user_data_base64 = filebase64("${path.module}/mongo.sh")

@@ -31,3 +31,8 @@ variable "names" {
   type    = set(string)
   default = ["rs1", "rs2", "rs3"]
 }
+
+variable "useNvME" {
+  type = bool
+  default = true
+}

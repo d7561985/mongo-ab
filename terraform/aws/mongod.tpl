@@ -12,7 +12,7 @@ systemLog:
 
 # Where and how to store data.
 storage:
-  dbPath: /var/lib/mongo
+  dbPath: /data/mongodb
   directoryPerDB: true
   journal:
     enabled: true
