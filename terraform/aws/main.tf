@@ -17,8 +17,8 @@ module "init" {
   useNvME = var.useNvME
 
   # commit to back in  i3en.large
-  MONGOD_INSTANCE = "i3en.xlarge" // 4CPU + 32GB RAM
-  SPOT_PRICE = "0.3"
+#  MONGOD_INSTANCE = "i3en.xlarge" // 4CPU + 32GB RAM
+#  SPOT_PRICE = "0.3"
 }
 
 
@@ -64,8 +64,10 @@ resource "null_resource" "init_ssd" {
       "sudo mkdir /data",
 
       # mount ssd
-      "sudo mkfs -t xfs /dev/nvme0n1",
-      "sudo mount /dev/nvme0n1 /data",
+      "sudo file -s /dev/nvme1n1",
+      "sudo lsblk -f",
+      "sudo mkfs -t xfs /dev/nvme1n1",
+      "sudo mount /dev/nvme1n1 /data",
     ]
   }
 }
@@ -113,6 +115,8 @@ resource "null_resource" "upload_instances" {
       "sudo chown mongod:mongod /data/mongodb",
     ]
   }
+
+  depends_on = [null_resource.init_ssd]
 }
 
 # only after installation
@@ -178,6 +182,8 @@ resource "null_resource" "upload_mongos" {
       "sudo chmod 0700 ./mongo.sh", "sudo ./mongo.sh",
     ]
   }
+
+  depends_on = [null_resource.init_ssd]
 }
 
 resource "null_resource" "execute_mongos" {

@@ -142,20 +142,20 @@ resource "aws_instance" "mongo" {
   depends_on = [aws_launch_template.mongo]
 
   root_block_device {
-    volume_size = 100
-    volume_type = "gp3"
-    iops        = 16000
-    throughput  = 250
+    volume_size = 8
+    volume_type = "gp2"
+#    iops        = 16000
+#    throughput  = 250
   }
 
   user_data_base64 = filebase64("${path.module}/mongo.sh")
 }
 
 resource "aws_instance" "config" {
-  instance_type = "t2.small"
+  instance_type = "t3.small"
 
   #  availability_zone = "${var.AWS_REGION}a"
-  subnet_id       = data.aws_subnet.b.id
+  subnet_id       = data.aws_subnet.default.id
   security_groups = [aws_security_group.mongodb.id]
 
   launch_template {
@@ -178,10 +178,10 @@ resource "aws_instance" "config" {
 }
 
 resource "aws_instance" "mongos" {
-  instance_type = "t2.small"
+  instance_type = "t3.small"
 
   #  availability_zone = "${var.AWS_REGION}a"
-  subnet_id       = data.aws_subnet.b.id
+  subnet_id       = data.aws_subnet.default.id
   security_groups = [aws_security_group.mongodb.id]
 
   launch_template {

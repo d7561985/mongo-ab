@@ -5,9 +5,10 @@
 
 # where to write logging data.
 systemLog:
-   quiet: false
+   quiet: true
    destination: file
    logAppend: false
+   logRotate: rename
    path: /var/log/mongodb/mongod.log
 
 # Where and how to store data.
@@ -16,10 +17,12 @@ storage:
   directoryPerDB: true
   journal:
     enabled: true
-    commitIntervalMs: 500
-
-#  engine:
-#  wiredTiger:
+    commitIntervalMs: 100
+  wiredTiger:
+    engineConfig:
+      cacheSizeGB: 10
+      directoryForIndexes: true
+      journalCompressor: snappy # none
 
 # how the process runs
 processManagement:

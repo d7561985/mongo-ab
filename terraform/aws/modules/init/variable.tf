@@ -29,7 +29,7 @@ variable "SPOT_PRICE" {
 
 variable "names" {
   type    = set(string)
-  default = ["rs1", "rs2", "rs3"]
+  default = ["rs1", "rs2", "rs3", "rs4", "rs5", "rs6"]
 }
 
 variable "useNvME" {
