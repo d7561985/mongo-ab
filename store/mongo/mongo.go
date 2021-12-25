@@ -49,7 +49,9 @@ func New(addr string, db, balance, journal string) (*Repo, error) {
 		SetWriteConcern(writeconcern.New(
 			writeconcern.WTimeout(timeout),
 			writeconcern.J(false),
-		)).SetRetryWrites(false)
+		)).SetRetryWrites(false).
+		SetCompressors([]string{"zlib"}).
+		SetZlibLevel(1)
 
 	client, err := mongo.Connect(context.TODO(), clientOpts)
 	if err != nil {
@@ -140,8 +142,8 @@ func (r *Repo) setup(ctx context.Context) (*Repo, error) {
 	res = r.client.Database("admin").RunCommand(ctx, bson.D{
 		{Key: "shardCollection", Value: bsonx.String(jc)},
 		//
-		{Key: "key", Value: bson.D{{Key: "accountId", Value: 1}}},
-		//{Key: "numInitialChunks", Value: bsonx.Int64(8192*3 - 3)},
+		{Key: "key", Value: bson.D{{Key: "accountId", Value: "hashed"}}},
+		{Key: "numInitialChunks", Value: bsonx.Int64(8192*3 - 3)},
 		//
 		//{Key: "presplitHashedZones", Value: bsonx.Boolean(true)},
 	})
@@ -219,20 +221,6 @@ func (r *Repo) UpdateTX(ctx context.Context, in changing.Transaction) (interface
 
 	r.call(UpdateBeforeLock)
 	defer r.call(UpdateDefer)
-
-	//mutexKey := fmt.Sprintf("%d", in.AccountID)
-	//mx := r.redisclient.CreateMutex().NewMutex(mutexKey)
-	//if err := mx.Lock(); err != nil {
-	//	return nil, errors.WithStack(err)
-	//}
-	//
-	//defer func() {
-	//	// only print error, we shouldn't overwrite output error as
-	//	// understood operation already completed
-	//	if _, err := mx.Unlock(); err != nil {
-	//		log.Printf(".... lock error: %s", err)
-	//	}
-	//}()
 
 	opts := options.Session().
 		// ToDo: consider that, decrease speed but possible we should use it
