@@ -2,65 +2,41 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"math/rand"
 	"os"
-	"time"
 
 	"github.com/d7561985/mongo-ab/pkg/changing"
-	"github.com/d7561985/mongo-ab/store/mongo"
+	"github.com/d7561985/mongo-ab/pkg/store/mongo"
+	"github.com/d7561985/mongo-ab/pkg/worker"
 	fuzz "github.com/google/gofuzz"
-	"golang.org/x/sync/errgroup"
 )
 
-var dbConnect = "mongodb://3.68.189.249:27017"
+var dbConnect = "mongodb://3.120.251.23:50000"
 
-const maxLoop = 100_000
 const maxUserID = 100_000
 
 func main() {
-	i := 0
-	const X = 30
-
 	addr, ok := os.LookupEnv("MONGO_DB")
 	if !ok {
 		addr = dbConnect
 	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	q, err := mongo.New(addr, "db", "balance", "journal")
 	if err != nil {
 		log.Fatalf("%+v", err)
 	}
 
-	start := time.Now()
+	w := worker.New(&worker.Config{Threads: 100})
 
-	go func() {
-		for {
-			<-time.After(time.Second)
-			ms := time.Now().Sub(start)
-
-			q := float64(i*X) / float64(ms.Seconds())
-			fmt.Println("comb/sec:", q, "duration:", ms.Seconds(), i)
-		}
-	}()
-
-	for ; i < maxLoop; i++ {
-		g := errgroup.Group{}
-		for j := 0; j < X; j++ {
-			g.Go(func() error {
-				tx := genRequest(uint64(rand.Int()%maxUserID), 100)
-				_, err = q.UpdateTX(context.TODO(), tx)
-				if err != nil {
-					log.Fatal(err)
-				}
-
-				return nil
-			})
-		}
-
-		_ = g.Wait()
-	}
+	w.Run(ctx, func() error {
+		tx := genRequest(uint64(rand.Int()%maxUserID), 100)
+		_, err = q.UpdateTX(context.TODO(), tx)
+		return err
+	})
 }
 
 func genRequest(usr uint64, add float64) changing.Transaction {

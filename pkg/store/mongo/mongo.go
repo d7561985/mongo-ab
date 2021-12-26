@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/d7561985/mongo-ab/internal/config"
 	"github.com/d7561985/mongo-ab/pkg/changing"
 
 	_ "embed"
@@ -30,6 +31,8 @@ const (
 )
 
 type Repo struct {
+	cfg config.Mongo
+
 	client *mongo.Client
 	db     *mongo.Database
 
@@ -51,7 +54,7 @@ func New(addr string, db, balance, journal string) (*Repo, error) {
 			writeconcern.J(false),
 		)).SetRetryWrites(false).
 		SetCompressors([]string{"zlib"}).
-		SetZlibLevel(1)
+		SetZlibLevel(9)
 
 	client, err := mongo.Connect(context.TODO(), clientOpts)
 	if err != nil {

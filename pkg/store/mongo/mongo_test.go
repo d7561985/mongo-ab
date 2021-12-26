@@ -17,7 +17,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-var dbConnect = "mongodb://18.194.42.137:27017"
+var dbConnect = "mongodb://3.124.194.75:50000"
 
 // /opt/homebrew/Cellar/mongodb-community/5.0.3/bin/mongod --port 27021 --replSet rs1 --dbpath data/data1 --bind_ip localhost -f  /opt/homebrew/etc/mongod.conf
 // cat /opt/homebrew/etc/mongod.conf
@@ -72,7 +72,7 @@ func TestLoadMakeTransaction(t *testing.T) {
 }
 
 func TestTransaction(t *testing.T) {
-	q, _ := New(dbConnect, "demo", "XXX", "YYY")
+	q, _ := New(dbConnect, "db", "balance", "journal")
 
 	tx := changing.Transaction{}
 	fuzz.New().Fuzz(&tx)
@@ -146,7 +146,7 @@ func insert(t *testing.T) {
 
 	// wait after first lookup
 	go func() {
-		q, _ := New(dbConnect, "demo", "XXX", "YYY")
+		q, _ := New(dbConnect, "db", "balance", "journal")
 		q.AddHook(UpdateBeforeLock, func() {
 			<-ch
 		})
@@ -159,7 +159,7 @@ func insert(t *testing.T) {
 
 	// unlock
 	go func() {
-		q, _ := New(dbConnect, "demo", "XXX", "YYY")
+		q, _ := New(dbConnect, "db", "balance", "journal")
 		q.AddHook(UpdateBeforeLock, func() {
 			ch <- struct{}{}
 		})
@@ -196,7 +196,7 @@ func TestComplianceBillingHandler(t *testing.T) {
 	}()
 
 	fn := func() error {
-		q, _ := New(dbConnect, "demo", "XXX", "YYY")
+		q, _ := New(dbConnect, "db", "balance", "journal")
 		for val := range ch {
 			_, err := q.UpdateTX(context.TODO(), genRequest(user, val))
 			if err != nil {
@@ -266,7 +266,7 @@ func BenchmarkUpdate(b *testing.B) {
 }
 
 func BenchmarkInsert(b *testing.B) {
-	q, _ := New("mongodb://127.0.0.1:27017", "demo", "XXX", "YYY")
+	q, _ := New("mongodb://3.124.194.75:50000", "db", "balance", "journal")
 
 	for i := 0; i < b.N; i++ {
 		tx := changing.Transaction{}
