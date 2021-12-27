@@ -36,9 +36,6 @@ type Repo struct {
 	client *mongo.Client
 	db     *mongo.Database
 
-	LatestC  string
-	JournalC string
-
 	hooks map[PlaceHolders]func()
 }
 
@@ -47,14 +44,20 @@ type Repo struct {
 //go:embed schema-validation-latest-transaction.json
 var schema []byte
 
-func New(addr string, db, balance, journal string) (*Repo, error) {
-	clientOpts := options.Client().ApplyURI(addr).
+func New(cfg config.Mongo) (*Repo, error) {
+	clientOpts := options.Client().ApplyURI(cfg.Addr).
 		SetWriteConcern(writeconcern.New(
 			writeconcern.WTimeout(timeout),
 			writeconcern.J(false),
-		)).SetRetryWrites(false).
-		SetCompressors([]string{"zlib"}).
-		SetZlibLevel(9)
+		)).SetRetryWrites(true).
+		SetCompressors([]string{cfg.Compression.Type})
+
+	switch cfg.Compression.Type {
+	case "zlib":
+		clientOpts.SetZlibLevel(cfg.Compression.Level)
+	case "zstd":
+		clientOpts.SetZstdLevel(cfg.Compression.Level)
+	}
 
 	client, err := mongo.Connect(context.TODO(), clientOpts)
 	if err != nil {
@@ -62,10 +65,9 @@ func New(addr string, db, balance, journal string) (*Repo, error) {
 	}
 
 	v := &Repo{client: client,
-		db:       client.Database(db),
-		LatestC:  balance,
-		JournalC: journal,
-		hooks:    make(map[PlaceHolders]func()),
+		cfg:   cfg,
+		db:    client.Database(cfg.DB),
+		hooks: make(map[PlaceHolders]func()),
 	}
 
 	return v.setup(context.TODO())
@@ -73,7 +75,7 @@ func New(addr string, db, balance, journal string) (*Repo, error) {
 
 func (r *Repo) setup(ctx context.Context) (*Repo, error) {
 	// journal index
-	if _, err := r.db.Collection(r.JournalC).Indexes().CreateOne(ctx, mongo.IndexModel{
+	if _, err := r.db.Collection(r.cfg.Collections.Journal).Indexes().CreateOne(ctx, mongo.IndexModel{
 		Keys:    bson.D{bson.E{Key: "accountId", Value: "hashed"}},
 		Options: options.Index(),
 	}); err != nil {
@@ -81,7 +83,7 @@ func (r *Repo) setup(ctx context.Context) (*Repo, error) {
 	}
 
 	// latest index
-	if _, err := r.db.Collection(r.LatestC).Indexes().CreateOne(ctx, mongo.IndexModel{
+	if _, err := r.db.Collection(r.cfg.Collections.Balance).Indexes().CreateOne(ctx, mongo.IndexModel{
 		Keys:    bson.D{bson.E{Key: "_id", Value: "hashed"}},
 		Options: options.Index(),
 	}); err != nil {
@@ -93,7 +95,7 @@ func (r *Repo) setup(ctx context.Context) (*Repo, error) {
 		return nil, errors.WithStack(err)
 	}
 
-	list, err := r.db.ListCollectionNames(ctx, bson.D{{Key: "name", Value: r.LatestC}})
+	list, err := r.db.ListCollectionNames(ctx, bson.D{{Key: "name", Value: r.cfg.Collections.Balance}})
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -109,14 +111,14 @@ func (r *Repo) setup(ctx context.Context) (*Repo, error) {
 			SetValidationLevel("strict").
 			SetValidator(bson.M{"$jsonSchema": doc})
 
-		if err := r.db.CreateCollection(ctx, r.LatestC, createOpts); err != nil {
+		if err := r.db.CreateCollection(ctx, r.cfg.Collections.Balance, createOpts); err != nil {
 			return nil, errors.WithStack(err)
 		}
 
 	} else {
 		// spec: https://docs.mongodb.com/manual/reference/command/collMod/#mongodb-dbcommand-dbcmd.collMod
 		res := r.db.RunCommand(ctx, bson.D{
-			{Key: "collMod", Value: bsonx.String(r.LatestC)},
+			{Key: "collMod", Value: bsonx.String(r.cfg.Collections.Balance)},
 			{Key: "validationLevel", Value: bsonx.String("off")},
 			{Key: "validationAction", Value: bsonx.String("error")},
 			{Key: "validator", Value: bson.M{"$jsonSchema": doc}},
@@ -127,11 +129,11 @@ func (r *Repo) setup(ctx context.Context) (*Repo, error) {
 	}
 
 	// sharding enable
-	lc := fmt.Sprintf("%s.%s", r.db.Name(), r.LatestC)
+	lc := fmt.Sprintf("%s.%s", r.db.Name(), r.cfg.Collections.Balance)
 	res := r.client.Database("admin").RunCommand(ctx, bson.D{
 		bson.E{Key: "shardCollection", Value: bsonx.String(lc)},
 		// user hashed
-		{Key: "key", Value: bson.D{{"_id", bsonx.String("hashed")}}},
+		{Key: "key", Value: bson.D{{Key: "_id", Value: bsonx.String("hashed")}}},
 		//
 		{Key: "numInitialChunks", Value: bsonx.Int64(8192*3 - 3)},
 		//
@@ -141,7 +143,7 @@ func (r *Repo) setup(ctx context.Context) (*Repo, error) {
 		return nil, errors.WithStack(res.Err())
 	}
 
-	jc := fmt.Sprintf("%s.%s", r.db.Name(), r.JournalC)
+	jc := fmt.Sprintf("%s.%s", r.db.Name(), r.cfg.Collections.Journal)
 	res = r.client.Database("admin").RunCommand(ctx, bson.D{
 		{Key: "shardCollection", Value: bsonx.String(jc)},
 		//
@@ -163,7 +165,7 @@ func (r *Repo) Upsert(ctx context.Context, tx Transaction) (*TransactionInc, err
 		SetReturnDocument(options.After)
 
 	filter := bson.D{{Key: "_id", Value: tx.AccountID}}
-	res := r.db.Collection(r.LatestC).FindOneAndUpdate(ctx, filter,
+	res := r.db.Collection(r.cfg.Collections.Balance).FindOneAndUpdate(ctx, filter,
 		bson.D{
 			{
 				// if only insert
@@ -209,7 +211,7 @@ func (r *Repo) HandleBillingOperation(ctx context.Context, tx Transaction) (out 
 		TransactionSet: tx.TransactionSet,
 	}
 
-	if _, err = r.db.Collection(r.JournalC).InsertOne(ctx, jrnl); err != nil {
+	if _, err = r.db.Collection(r.cfg.Collections.Journal).InsertOne(ctx, jrnl); err != nil {
 		return nil, errors.WithStack(err)
 	}
 

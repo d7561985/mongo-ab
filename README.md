@@ -6,7 +6,7 @@ Some test based benchmarks which help check and understand and assess atomic ope
 Repo right now proof-of-concept with purpose to build AB test utility
 
 ## Requirement
-Mongo >= 3.6 installed with replica set. For custom launch look into Makefile commands that help you launch and setup on fly instance
+Mongo >= 5.0 installed with shards. For custom launch look into Makefile commands that help you launch and setup on fly instance
 
 ## How to
 Just be sure that you specify launch url

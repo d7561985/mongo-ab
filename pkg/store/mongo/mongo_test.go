@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/d7561985/mongo-ab/internal/config"
 	"github.com/d7561985/mongo-ab/pkg/changing"
 	fuzz "github.com/google/gofuzz"
 	"github.com/pkg/errors"
@@ -17,7 +18,18 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-var dbConnect = "mongodb://3.124.194.75:50000"
+var cfg = config.Mongo{
+	Addr: "mongodb://3.124.194.75:50000",
+	DB:   "db",
+	Collections: struct {
+		Balance string
+		Journal string
+	}{
+		Balance: "balance",
+		Journal: "journal",
+	},
+	WriteConcernJournal: false,
+}
 
 // /opt/homebrew/Cellar/mongodb-community/5.0.3/bin/mongod --port 27021 --replSet rs1 --dbpath data/data1 --bind_ip localhost -f  /opt/homebrew/etc/mongod.conf
 // cat /opt/homebrew/etc/mongod.conf
@@ -40,7 +52,7 @@ func TestLoadMakeTransaction(t *testing.T) {
 	i := 0
 	const X = 30
 
-	q, err := New(dbConnect, "db", "balance", "journal")
+	q, err := New(cfg)
 	require.NoError(t, err)
 
 	start := time.Now()
@@ -72,7 +84,7 @@ func TestLoadMakeTransaction(t *testing.T) {
 }
 
 func TestTransaction(t *testing.T) {
-	q, _ := New(dbConnect, "db", "balance", "journal")
+	q, _ := New(cfg)
 
 	tx := changing.Transaction{}
 	fuzz.New().Fuzz(&tx)
@@ -103,7 +115,7 @@ func TestTransaction(t *testing.T) {
 }
 
 func TestUpdateTX(t *testing.T) {
-	q, _ := New(dbConnect, "demo", "XXX", "YYY")
+	q, _ := New(cfg)
 
 	tx := changing.Transaction{}
 	fuzz.New().Fuzz(&tx)
@@ -124,7 +136,7 @@ func TestATOMICMongoUpdateTx(t *testing.T) {
 }
 
 func validation(t *testing.T) {
-	q, err := New(dbConnect, "demo", "XXX", "YYY")
+	q, err := New(cfg)
 	require.NoError(t, err)
 
 	tx := genRequest(1, -1)
@@ -146,7 +158,7 @@ func insert(t *testing.T) {
 
 	// wait after first lookup
 	go func() {
-		q, _ := New(dbConnect, "db", "balance", "journal")
+		q, _ := New(cfg)
 		q.AddHook(UpdateBeforeLock, func() {
 			<-ch
 		})
@@ -159,7 +171,7 @@ func insert(t *testing.T) {
 
 	// unlock
 	go func() {
-		q, _ := New(dbConnect, "db", "balance", "journal")
+		q, _ := New(cfg)
 		q.AddHook(UpdateBeforeLock, func() {
 			ch <- struct{}{}
 		})
@@ -196,7 +208,7 @@ func TestComplianceBillingHandler(t *testing.T) {
 	}()
 
 	fn := func() error {
-		q, _ := New(dbConnect, "db", "balance", "journal")
+		q, _ := New(cfg)
 		for val := range ch {
 			_, err := q.UpdateTX(context.TODO(), genRequest(user, val))
 			if err != nil {
@@ -214,7 +226,7 @@ func TestComplianceBillingHandler(t *testing.T) {
 
 	assert.NoError(t, w.Wait())
 
-	q, _ := New(dbConnect, "demo", "XXX", "YYY")
+	q, _ := New(cfg)
 	res := q.db.Collection("XXX").FindOne(
 		context.TODO(),
 		bson.D{{Key: "_id", Value: user}},
@@ -250,7 +262,7 @@ func genRequest(usr uint64, add float64) changing.Transaction {
 
 // BenchmarkUpdate-8   	      15	  68336472 ns/op	   38839 B/op	     494 allocs/op
 func BenchmarkUpdate(b *testing.B) {
-	q, _ := New("mongodb://127.0.0.1:27017", "demo", "XXX", "YYY")
+	q, _ := New(cfg)
 
 	for i := 0; i < b.N; i++ {
 		tx := changing.Transaction{}
@@ -266,7 +278,7 @@ func BenchmarkUpdate(b *testing.B) {
 }
 
 func BenchmarkInsert(b *testing.B) {
-	q, _ := New("mongodb://3.124.194.75:50000", "db", "balance", "journal")
+	q, _ := New(cfg)
 
 	for i := 0; i < b.N; i++ {
 		tx := changing.Transaction{}
