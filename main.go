@@ -1,23 +1,24 @@
 package main
 
 import (
-	"context"
-	"fmt"
 	"log"
+	"os"
 
-	_ "embed"
-
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"github.com/d7561985/mongo-ab/cmd/mongo"
+	"github.com/urfave/cli/v2" // imports as package "cli"
 )
 
 func main() {
-	clientOpts := options.Client().ApplyURI("mongodb://127.0.0.1:27017")
-	client, err := mongo.Connect(context.TODO(), clientOpts)
+	app := &cli.App{
+		Name:  "mongo ab",
+		Usage: "Compliance benchmark",
+		Commands: []*cli.Command{
+			mongo.New(),
+		},
+	}
+
+	err := app.Run(os.Args)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	err = client.Ping(context.TODO(), nil)
-	fmt.Println(err)
 }
