@@ -24,3 +24,7 @@ type Mongo struct {
 
 	WriteConcernJournal bool
 }
+
+type Postgres struct {
+	Addr string
+}
