@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
 
 	"github.com/d7561985/mongo-ab/internal/config"
@@ -19,8 +20,14 @@ const defThreads = 100
 var dbConnect = "postgresql://postgres@localhost/db"
 
 const (
+	Transaction = "tx"
+	Insert      = "insert"
+)
+
+const (
 	fThreads = "threads"
 	fMaxUser = "maxUser"
+	fOpt     = "operation"
 
 	fAddr = "addr"
 )
@@ -28,6 +35,7 @@ const (
 const (
 	EnvThreads   = "THREADS"
 	EnvMaxUser   = "MAX_USER"
+	EnvOperation = "OPERATION"
 	EnvMongoAddr = "POSTGRES_ADDR"
 )
 
@@ -42,6 +50,7 @@ func New() *cli.Command {
 		Flags: []cli.Flag{
 			&cli.IntFlag{Name: fThreads, Value: defThreads, Aliases: []string{"t"}, EnvVars: []string{EnvThreads}},
 			&cli.IntFlag{Name: fMaxUser, Value: defMaxUserID, Aliases: []string{"m"}, EnvVars: []string{EnvMaxUser}},
+			&cli.StringFlag{Name: fOpt, Value: Transaction, Usage: "What test start: tx - transaction intense, insert - only insert", Aliases: []string{"o"}, EnvVars: []string{EnvOperation}},
 
 			&cli.StringFlag{Name: fAddr, Value: dbConnect, EnvVars: []string{EnvMongoAddr}},
 		},
@@ -63,11 +72,23 @@ func (m *postgresCommand) Action(c *cli.Context) error {
 	}
 
 	w := worker.New(&worker.Config{Threads: c.Int(fThreads)})
-	w.Run(c.Context, func() error {
-		tx := genRequest(uint64(rand.Int()%c.Int(fMaxUser)), 100)
-		_, err = repo.UpdateTX(context.TODO(), tx)
-		return errors.WithStack(err)
-	})
+	switch c.String(fOpt) {
+	case Insert:
+		w.Run(c.Context, func() error {
+			tx := genRequest(uint64(rand.Int()%c.Int(fMaxUser)), 100)
+			j := postgres.NewJournal(postgres.Balance{AccountID: tx.AccountID}, tx)
+
+			return errors.WithStack(repo.Insert(context.TODO(), j))
+		})
+	case Transaction:
+		w.Run(c.Context, func() error {
+			tx := genRequest(uint64(rand.Int()%c.Int(fMaxUser)), 100)
+			_, err = repo.UpdateTX(context.TODO(), tx)
+			return errors.WithStack(err)
+		})
+	default:
+		return fmt.Errorf("unsuported operation %q", c.String(fOpt))
+	}
 	return nil
 }
 

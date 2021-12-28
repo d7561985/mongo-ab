@@ -205,17 +205,25 @@ func (r *Repo) HandleBillingOperation(ctx context.Context, tx Transaction) (out 
 		return nil, errors.WithStack(err)
 	}
 
-	jrnl := &Transaction{
+	jrnl := Transaction{
 		AccountID:      tx.AccountID,
 		TransactionInc: *lTx,
 		TransactionSet: tx.TransactionSet,
 	}
 
-	if _, err = r.db.Collection(r.cfg.Collections.Journal).InsertOne(ctx, jrnl); err != nil {
+	if err = r.Insert(ctx, jrnl); err != nil {
 		return nil, errors.WithStack(err)
 	}
 
-	return jrnl, nil
+	return &jrnl, nil
+}
+
+func (r *Repo) Insert(ctx context.Context, jrnl Transaction) error {
+	if _, err := r.db.Collection(r.cfg.Collections.Journal).InsertOne(ctx, jrnl); err != nil {
+		return errors.WithStack(err)
+	}
+
+	return nil
 }
 
 // UpdateTX ...

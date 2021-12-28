@@ -2,6 +2,7 @@ package mongo
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
 
 	"github.com/d7561985/mongo-ab/internal/config"
@@ -15,10 +16,16 @@ import (
 
 var dbConnect = "mongodb://3.120.251.23:50000"
 
+const (
+	Transaction = "tx"
+	Insert      = "insert"
+)
+
 const defMaxUserID = 100_000
 const defThreads = 100
 
 const (
+	fOpt     = "operation"
 	fThreads = "threads"
 	fMaxUser = "maxUser"
 
@@ -32,8 +39,9 @@ const (
 )
 
 const (
-	EnvThreads = "THREADS"
-	EnvMaxUser = "MAX_USER"
+	EnvThreads   = "THREADS"
+	EnvMaxUser   = "MAX_USER"
+	EnvOperation = "OPERATION"
 
 	EnvMongoAddr              = "MONGO_ADDR"
 	EnvMongoDB                = "MONGO_DB"
@@ -55,6 +63,7 @@ func New() *cli.Command {
 		Flags: []cli.Flag{
 			&cli.IntFlag{Name: fThreads, Value: defThreads, Aliases: []string{"t"}, EnvVars: []string{EnvThreads}},
 			&cli.IntFlag{Name: fMaxUser, Value: defMaxUserID, Aliases: []string{"m"}, EnvVars: []string{EnvMaxUser}},
+			&cli.StringFlag{Name: fOpt, Value: Transaction, Usage: "What test start: tx - transaction intense, insert - only insert", Aliases: []string{"o"}, EnvVars: []string{EnvOperation}},
 
 			&cli.StringFlag{Name: fAddr, Value: dbConnect, EnvVars: []string{EnvMongoAddr}},
 			&cli.StringFlag{Name: fDB, Value: "db", EnvVars: []string{EnvMongoDB}},
@@ -98,11 +107,28 @@ func (m *mongoCommand) Action(c *cli.Context) error {
 
 	w := worker.New(&worker.Config{Threads: c.Int(fThreads)})
 
-	w.Run(c.Context, func() error {
-		tx := genRequest(uint64(rand.Int()%c.Int(fMaxUser)), 100)
-		_, err = q.UpdateTX(context.TODO(), tx)
-		return errors.WithStack(err)
-	})
+	switch c.String(fOpt) {
+	case Insert:
+		w.Run(c.Context, func() error {
+			tx := genRequest(uint64(rand.Int()%c.Int(fMaxUser)), 100)
+			in := mongo.NewTransaction(tx)
+			jrnl := mongo.Transaction{
+				AccountID:      int64(tx.AccountID),
+				TransactionInc: in.TransactionInc,
+				TransactionSet: in.TransactionSet,
+			}
+
+			return q.Insert(c.Context, jrnl)
+		})
+	case Transaction:
+		w.Run(c.Context, func() error {
+			tx := genRequest(uint64(rand.Int()%c.Int(fMaxUser)), 100)
+			_, err = q.UpdateTX(context.TODO(), tx)
+			return errors.WithStack(err)
+		})
+	default:
+		return fmt.Errorf("unsuported operation %q", c.String(fOpt))
+	}
 
 	return nil
 }

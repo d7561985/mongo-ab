@@ -50,8 +50,8 @@ storage.wiredTiger.directoryForIndexes: true
 #### outcome 
 collection count:
 ```bash
-[direct: mongos] db> db.journal.count({})
-62751198
+[direct: mongos] db> db.journal.estimatedDocumentCount()
+314124917
 [direct: mongos] db> db.balance.count({})
 100000
 ```
@@ -70,12 +70,43 @@ insert query update delete getmore command flushes mapped vsize  res faults qrw 
 
 #### disc usage:
 ```bash
-[ec2-user@ip-172-31-30-188 ~]$ sudo du -sh /data/
-13G/data/
-[ec2-user@ip-172-31-16-144 ~]$ sudo du -sh /data
-13G/data
-[ec2-user@ip-172-31-22-180 ~]$ sudo du -sh /data
-13G/data
+[ec2-user@ip-172-31-22-180 ~]$ sudo du -s /data
+34241868/data
+
+> mongosh
+use db;
+use db.journal.stats()
+  size: Long("41557982228"),
+  count: 103999035,
+  avgObjSize: 399,
+  storageSize: Long("19791413248"),
+  freeStorageSize: 417792,
+  capped: false,
+
+41557982228 > 38,70388700440526
+
+[ec2-user@ip-172-31-16-144 ~]$ sudo du -s /data
+34819912/data
+> mongosh
+  ns: 'db.journal',
+  size: Long("42367986503"),
+  count: 106025831,
+  avgObjSize: 399,
+  storageSize: Long("20179197952"),
+  freeStorageSize: 2568192,
+  capped: false,
+  
+[ec2-user@ip-172-31-30-188 ~]$ sudo du -s /data
+34230000/data
+
+> mongosh
+  ns: 'db.journal',
+  size: Long("41598551721"),
+  count: 104100051,
+  avgObjSize: 399,
+  storageSize: Long("19811229696"),
+  freeStorageSize: 1265664,
+  capped: false,
 ```
 
 #### sh.status

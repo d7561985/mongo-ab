@@ -132,3 +132,21 @@ func (s *Repo) UpdateTX(ctx context.Context, in changing.Transaction) (_ interfa
 
 	return b, nil
 }
+
+func (s *Repo) Insert(ctx context.Context, j Journal) error {
+	sq := `INSERT INTO journal("id2","accountId","balance","change","currency","date","depositAllSum","depositCount",
+                "pincoinBalance","pincoinAllSum","pincoinChange","project","revert","transactionId",
+                "transactionBson", "transactionType"
+            ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15, $16)`
+	_, err := s.pool.Exec(ctx, sq,
+		j.ID2, j.AccountID, j.Balance.Balance, j.Change, j.Currency, j.Date, j.DepositAllSum, j.DepositCount,
+		j.PincoinBalance, j.PincoinsAllSum, j.PincoinChange, j.Project, j.Revert, j.TransactionID,
+		j.TransactionIDBson, j.TransactionType,
+	)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	return nil
+
+}
