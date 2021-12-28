@@ -221,3 +221,101 @@ databases
   }
 ]
 ```
+
+## Test2
+
+Update from test1:
+* mongos configuration up to `c5.large`
+* config mongod `storage.wiredTiger.cacheSizeGB up to 25
+
+### topology:
+mongod:  x3 r5d.xlarge: 32 GiB of memory, 4 vCPUs, 1 x 150 NVMe SSD, 64-bit platform
+mongos:  x1 c5.large: c6i.large, 4 GiB of Memory, 2 vCPUs, EBS only, 64-bit platform
+config:  x1 x1 t3.small: t3.small, 2 GiB of Memory, 2 vCPUs, EBS only, 64-bit platform 
+
+### config mongod:
+link to SSD
+storage.dbPath: /data/mongodb
+
+storage.directoryPerDB: true
+storage.journal.enabled: true
+storage.journal.commitIntervalMs: 100
+storage.wiredTiger.cacheSizeGB: 25
+storage.wiredTiger.directoryForIndexes: true
+
+### Stop
+reason: c5.large not enough, CPU 100%
+
+INSERTS:
+```
+  8646    *0     *0     *0       0  8659|0       0     0B 1.60G 72.0M      0 0|0 0|0  5.86m   1.49m  105 Dec 28 16:15:28.837
+  8597    *0     *0     *0       0  8600|0       0     0B 1.60G 72.0M      0 0|0 0|0  5.82m   1.48m  105 Dec 28 16:15:29.842
+  8577    *0     *0     *0       0  8554|0       0     0B 1.60G 72.0M      0 0|0 0|0  5.79m   1.48m  105 Dec 28 16:15:30.826
+```
+
+TX:
+```
+  2636    *0     *0     *0       0  7905|0       0     0B 1.61G 92.0M      0 0|0 0|0  3.82m   2.23m  105 Dec 28 16:17:15.010
+  2576    *0     *0     *0       0  7752|0       0     0B 1.61G 92.0M      0 0|0 0|0  3.74m   2.18m  105 Dec 28 16:17:16.012
+  2577    *0     *0     *0       0  7729|0       0     0B 1.61G 92.0M      0 0|0 0|0  3.73m   2.18m  105 Dec 28 16:17:17.008
+  2585    *0     *0     *0       0  7761|0       0     0B 1.61G 92.0M      0 0|0 0|0  3.74m   2.19m  105 Dec 28 16:17:18.012
+  2580    *0     *0     *0       0  7757|0       0     0B 1.61G 92.0M      0 0|0 0|0  3.74m   2.18m  105 Dec 28 16:17:19.016
+  2594    *0     *0     *0       0  7796|0       0     0B 1.61G 92.0M      0 0|0 0|0  3.76m   2.20m  105 Dec 28 16:17:20.012
+```
+
+## Test3
+Update from test1:
+* mongos configuration up to `c5.2xlarge`
+
+### topology:
+mongod:  x3 r5d.xlarge: 32 GiB of memory, 4 vCPUs, 1 x 150 NVMe SSD, 64-bit platform
+mongos:  x1 c5.2xlarge: 8 GiB of Memory, 4 vCPUs, EBS only, 64-bit platform
+config:  x1 x1 t3.small: t3.small, 2 GiB of Memory, 2 vCPUs, EBS only, 64-bit platform 
+
+### Stop
+reason: c5.2xlarge not enough, CPU 100%
+
+INSERT:
+```
+ 28379    *0     *0     *0       0 28396|0       0     0B 1.59G 79.0M      0 0|0 0|0  19.2m   4.84m  105 Dec 28 16:38:26.855
+ 28419    *0     *0     *0       0 28432|0       0     0B 1.59G 79.0M      0 0|0 0|0  19.2m   4.85m  105 Dec 28 16:38:27.854
+ 21677    *0     *0     *0       0 21679|0       0     0B 1.59G 79.0M      0 0|0 0|0  14.7m   3.70m  105 Dec 28 16:38:28.867
+ 28612    *0     *0     *0       0 28599|0       0     0B 1.59G 79.0M      0 0|0 0|0  19.4m   4.88m  105 Dec 28 16:38:29.865
+```
+TX:
+```
+  9455    *0     *0     *0       0 28380|0       0     0B 1.61G 91.0M      0 0|0 0|0  13.7m   7.89m  105 Dec 28 16:41:39.838
+  9360    *0     *0     *0       0 28081|0       0     0B 1.61G 91.0M      0 0|0 0|0  13.6m   7.82m  105 Dec 28 16:41:40.835
+  9430    *0     *0     *0       0 28310|0       0     0B 1.61G 91.0M      0 0|0 0|0  13.7m   7.86m  105 Dec 28 16:41:41.839
+  9370    *0     *0     *0       0 28134|0       0     0B 1.61G 91.0M      0 0|0 0|0  13.6m   7.82m  105 Dec 28 16:41:42.848
+```
+
+## Test4
+Update from test1:
+* mongos configuration up to `c5.4xlarge`
+
+### topology:
+mongod:  x3 r5d.xlarge: 32 GiB of memory, 4 vCPUs, 1 x 150 NVMe SSD, 64-bit platform
+mongos:  x1 c5.4xlarge: 32 GiB of Memory, 16 vCPUs, EBS only, 64-bit platform
+config:  x1 x1 t3.small: t3.small, 2 GiB of Memory, 2 vCPUs, EBS only, 64-bit platform 
+
+#### Stop
+reason: mongod `r5d.xlarge` CPU threshold exceed
+
+INSERT:
+```
+insert query update delete getmore command flushes mapped vsize   res faults qrw arw net_in net_out conn                time
+ 31621    *0     *0     *0       0 31615|0       0     0B 1.63G  108M      0 0|0 0|0  21.4m   5.40m  105 Dec 28 17:22:23.682
+ 24024    *0     *0     *0       0 24074|0       0     0B 1.63G  108M      0 0|0 0|0  16.3m   4.10m  105 Dec 28 17:22:24.687
+ 26372    *0     *0     *0       0 26356|0       0     0B 1.63G  108M      0 0|0 0|0  17.8m   4.50m  105 Dec 28 17:22:25.689
+ 29757    *0     *0     *0       0 29742|0       0     0B 1.63G  108M      0 0|0 0|0  20.1m   5.08m  105 Dec 28 17:22:26.699
+ 30159    *0     *0     *0       0 30172|0       0     0B 1.63G  108M      0 0|0 0|0  20.4m   5.15m  105 Dec 28 17:22:27.723
+```
+
+TX:
+```
+insert query update delete getmore command flushes mapped vsize   res faults qrw arw net_in net_out conn                time
+ 10993    *0     *0     *0       0 32977|0       0     0B 1.62G  108M      0 0|0 0|0  15.9m   9.17m  105 Dec 28 17:23:53.684
+ 10768    *0     *0     *0       0 32349|0       0     0B 1.62G  108M      0 0|0 0|0  15.6m   8.99m  105 Dec 28 17:23:54.694
+ 10941    *0     *0     *0       0 32802|0       0     0B 1.62G  108M      0 0|0 0|0  15.8m   9.12m  105 Dec 28 17:23:55.682
+```
