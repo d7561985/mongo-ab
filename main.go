@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
+	"os/signal"
 
 	"github.com/d7561985/mongo-ab/cmd/mongo"
 	"github.com/d7561985/mongo-ab/cmd/postgres"
@@ -10,6 +12,19 @@ import (
 )
 
 func main() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		ch := make(chan os.Signal, 1)
+		signal.Notify(ch, os.Kill, os.Interrupt)
+
+		<-ch
+
+		log.Println("stop application")
+		cancel()
+	}()
+
 	app := &cli.App{
 		Name:  "mongo ab",
 		Usage: "Compliance benchmark",
@@ -19,7 +34,7 @@ func main() {
 		},
 	}
 
-	err := app.Run(os.Args)
+	err := app.RunContext(ctx, os.Args)
 	if err != nil {
 		log.Fatal(err)
 	}

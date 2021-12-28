@@ -55,18 +55,15 @@ func getCfg(c *cli.Context) config.Postgres {
 	}
 }
 func (m *postgresCommand) Action(c *cli.Context) error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	cfg := getCfg(c)
 
-	repo, err := postgres.New(ctx, cfg)
+	repo, err := postgres.New(c.Context, cfg)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
 	w := worker.New(&worker.Config{Threads: c.Int(fThreads)})
-	w.Run(ctx, func() error {
+	w.Run(c.Context, func() error {
 		tx := genRequest(uint64(rand.Int()%c.Int(fMaxUser)), 100)
 		_, err = repo.UpdateTX(context.TODO(), tx)
 		return errors.WithStack(err)

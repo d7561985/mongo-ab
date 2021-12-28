@@ -89,9 +89,6 @@ func getCfg(c *cli.Context) config.Mongo {
 }
 
 func (m *mongoCommand) Action(c *cli.Context) error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	cfg := getCfg(c)
 
 	q, err := mongo.New(cfg)
@@ -101,7 +98,7 @@ func (m *mongoCommand) Action(c *cli.Context) error {
 
 	w := worker.New(&worker.Config{Threads: c.Int(fThreads)})
 
-	w.Run(ctx, func() error {
+	w.Run(c.Context, func() error {
 		tx := genRequest(uint64(rand.Int()%c.Int(fMaxUser)), 100)
 		_, err = q.UpdateTX(context.TODO(), tx)
 		return errors.WithStack(err)
