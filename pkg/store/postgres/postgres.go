@@ -39,38 +39,38 @@ func New(ctx context.Context, cfg config.Postgres) (*Repo, error) {
 
 func (s *Repo) Setup(ctx context.Context) error {
 	sql := `
+CREATE EXTENSION  IF NOT EXISTS "uuid-ossp";
+
 BEGIN ;
 CREATE TABLE IF NOT EXISTS "balance"
 (
-    "accountId"      INT8 NOT NULL,
-    "balance"        BIGINT  DEFAULT NULL,
-    "depositAllSum"  BIGINT  DEFAULT NULL,
+    "accountId"      INT8 NOT NULL PRIMARY KEY,
+    "balance"        float4  DEFAULT NULL,
+    "depositAllSum"  float4  DEFAULT NULL,
     "depositCount"  INT  DEFAULT NULL,
-    "pincoinBalance"  BIGINT  DEFAULT NULL,
-    "pincoinAllSum"  BIGINT  DEFAULT NULL,
-    PRIMARY KEY ("accountId")
+    "pincoinBalance"  float4  DEFAULT NULL,
+    "pincoinAllSum"  float4  DEFAULT NULL
 );
 
 CREATE TABLE IF NOT EXISTS "journal"
 (
-    "id"       UUID        NOT NULL, -- _id
+    "id"       UUID        DEFAULT gen_random_uuid() PRIMARY KEY, -- _id
     "id2"       bytea        NOT NULL, -- id
-    "accountId"    BIGINT NOT NULL,
-    "balance"        BIGINT  DEFAULT NULL,
-    "change"  INT  DEFAULT NULL,
+    "accountId"      INT8 NOT NULL,
+    "balance"        FLOAT8  DEFAULT NULL,
+    "depositAllSum"  FLOAT8  DEFAULT NULL,
+    "depositCount"  INT  DEFAULT NULL,
+    "pincoinBalance"  FLOAT8  DEFAULT NULL,
+    "pincoinAllSum"  FLOAT8  DEFAULT NULL,
+    "change"  FLOAT4  DEFAULT NULL,
+    "pincoinChange"  FLOAT4  DEFAULT NULL,
     "currency"  SMALLINT  DEFAULT NULL,
     "date"     TIMESTAMP   NOT NULL,
-    "depositAllSum"  BIGINT  DEFAULT NULL,
-    "depositCount"  INT  DEFAULT NULL,
-    "pincoinBalance"  BIGINT  DEFAULT NULL,
-    "pincoinAllSum"  BIGINT  DEFAULT NULL,
-    "pincoinChange"  INT  DEFAULT NULL,
     "project"        VARCHAR(64) NOT NULL,
     "revert"       BOOLEAN DEFAULT NULL,
-    "transactionId"        VARCHAR(36) NOT NULL,
+    "transactionId"        INT8 NOT NULL,
     "transactionBson"        bytea NOT NULL,
-    "transactionType"        VARCHAR(36) NOT NULL,
-    PRIMARY KEY ("accountId")
+    "transactionType"        VARCHAR(36) NOT NULL
 );
 COMMIT;
 `
@@ -116,6 +116,19 @@ func (s *Repo) UpdateTX(ctx context.Context, in changing.Transaction) (_ interfa
 		return nil, errors.WithStack(err)
 	}
 
-	tx.Exec(ctx, `INSERT INTO journal VALUES (id)`)
+	j := NewJournal(b, in)
+	sq := `INSERT INTO journal("id2","accountId","balance","change","currency","date","depositAllSum","depositCount",
+                "pincoinBalance","pincoinAllSum","pincoinChange","project","revert","transactionId",
+                "transactionBson", "transactionType"
+            ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15, $16)`
+	_, err = tx.Exec(ctx, sq,
+		j.ID2, j.AccountID, j.Balance.Balance, j.Change, j.Currency, j.Date, j.DepositAllSum, j.DepositCount,
+		j.PincoinBalance, j.PincoinsAllSum, j.PincoinChange, j.Project, j.Revert, j.TransactionID,
+		j.TransactionIDBson, j.TransactionType,
+	)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
 	return b, nil
 }
