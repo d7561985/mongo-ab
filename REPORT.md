@@ -5,9 +5,9 @@
 ## Test1
 
 ### topology:
-mongod:  x3 r5d.xlarge: 32 GiB of memory, 4 vCPUs, 1 x 150 NVMe SSD, 64-bit platform
-mongos:  x1 t3.small: t3.small, 2 GiB of Memory, 2 vCPUs, EBS only, 64-bit platform
-config:  x1 x1 t3.small: t3.small, 2 GiB of Memory, 2 vCPUs, EBS only, 64-bit platform 
+* mongod:  x3 r5d.xlarge: 32 GiB of memory, 4 vCPUs, 1 x 150 NVMe SSD, 64-bit platform
+* mongos:  x1 t3.small: t3.small, 2 GiB of Memory, 2 vCPUs, EBS only, 64-bit platform
+* config:  x1 x1 t3.small: t3.small, 2 GiB of Memory, 2 vCPUs, EBS only, 64-bit platform 
 
 ### config mongod:
 link to SSD
@@ -229,9 +229,9 @@ Update from test1:
 * config mongod `storage.wiredTiger.cacheSizeGB up to 25
 
 ### topology:
-mongod:  x3 r5d.xlarge: 32 GiB of memory, 4 vCPUs, 1 x 150 NVMe SSD, 64-bit platform
-mongos:  x1 c5.large: c6i.large, 4 GiB of Memory, 2 vCPUs, EBS only, 64-bit platform
-config:  x1 x1 t3.small: t3.small, 2 GiB of Memory, 2 vCPUs, EBS only, 64-bit platform 
+* mongod:  x3 r5d.xlarge: 32 GiB of memory, 4 vCPUs, 1 x 150 NVMe SSD, 64-bit platform
+* mongos:  x1 c5.large: c6i.large, 4 GiB of Memory, 2 vCPUs, EBS only, 64-bit platform
+* config:  x1 x1 t3.small: t3.small, 2 GiB of Memory, 2 vCPUs, EBS only, 64-bit platform 
 
 ### config mongod:
 link to SSD
@@ -268,9 +268,9 @@ Update from test1:
 * mongos configuration up to `c5.2xlarge`
 
 ### topology:
-mongod:  x3 r5d.xlarge: 32 GiB of memory, 4 vCPUs, 1 x 150 NVMe SSD, 64-bit platform
-mongos:  x1 c5.2xlarge: 8 GiB of Memory, 4 vCPUs, EBS only, 64-bit platform
-config:  x1 x1 t3.small: t3.small, 2 GiB of Memory, 2 vCPUs, EBS only, 64-bit platform 
+* mongod:  x3 r5d.xlarge: 32 GiB of memory, 4 vCPUs, 1 x 150 NVMe SSD, 64-bit platform
+* mongos:  x1 c5.2xlarge: 8 GiB of Memory, 4 vCPUs, EBS only, 64-bit platform
+* config:  x1 x1 t3.small: t3.small, 2 GiB of Memory, 2 vCPUs, EBS only, 64-bit platform 
 
 ### Stop
 reason: c5.2xlarge not enough, CPU 100%
@@ -295,9 +295,9 @@ Update from test1:
 * mongos configuration up to `c5.4xlarge`
 
 ### topology:
-mongod:  x3 r5d.xlarge: 32 GiB of memory, 4 vCPUs, 1 x 150 NVMe SSD, 64-bit platform
-mongos:  x1 c5.4xlarge: 32 GiB of Memory, 16 vCPUs, EBS only, 64-bit platform
-config:  x1 x1 t3.small: t3.small, 2 GiB of Memory, 2 vCPUs, EBS only, 64-bit platform 
+* mongod:  x3 r5d.xlarge: 32 GiB of memory, 4 vCPUs, 1 x 150 NVMe SSD, 64-bit platform
+* mongos:  x1 c5.4xlarge: 32 GiB of Memory, 16 vCPUs, EBS only, 64-bit platform
+* config:  x1 x1 t3.small: t3.small, 2 GiB of Memory, 2 vCPUs, EBS only, 64-bit platform 
 
 #### Stop
 reason: mongod `r5d.xlarge` CPU threshold exceed
@@ -324,9 +324,9 @@ insert query update delete getmore command flushes mapped vsize   res faults qrw
 increase mongod instance + 1
 
 ### topology:
-mongod:  x4 r5d.xlarge: 32 GiB of memory, 4 vCPUs, 1 x 150 NVMe SSD, 64-bit platform
-mongos:  x1 c5.4xlarge: 32 GiB of Memory, 16 vCPUs, EBS only, 64-bit platform
-config:  x1 x1 t3.small: t3.small, 2 GiB of Memory, 2 vCPUs, EBS only, 64-bit platform 
+* mongod:  x4 r5d.xlarge: 32 GiB of memory, 4 vCPUs, 1 x 150 NVMe SSD, 64-bit platform
+* mongos:  x1 c5.4xlarge: 32 GiB of Memory, 16 vCPUs, EBS only, 64-bit platform
+* config:  x1 x1 t3.small: t3.small, 2 GiB of Memory, 2 vCPUs, EBS only, 64-bit platform 
 
 
 ### stop
@@ -345,9 +345,9 @@ insert query update delete getmore command flushes mapped vsize   res faults qrw
 increase mongod instance  + 2
 
 ### topology:
-mongod:  x6 r5d.xlarge: 32 GiB of memory, 4 vCPUs, 1 x 150 NVMe SSD, 64-bit platform
-mongos:  x1 c5.4xlarge: 32 GiB of Memory, 16 vCPUs, EBS only, 64-bit platform
-config:  x1 x1 t3.small: t3.small, 2 GiB of Memory, 2 vCPUs, EBS only, 64-bit platform 
+* mongod:  x6 r5d.xlarge: 32 GiB of memory, 4 vCPUs, 1 x 150 NVMe SSD, 64-bit platform
+* mongos:  x1 c5.4xlarge: 32 GiB of Memory, 16 vCPUs, EBS only, 64-bit platform
+* config:  x1 x1 t3.small: t3.small, 2 GiB of Memory, 2 vCPUs, EBS only, 64-bit platform 
 
 
 ### stop
@@ -374,10 +374,9 @@ increase mongod instance = 2 instances
 mongos up to c5.9xlarge
 mongod r5d.xlarge =>r5d.2xlarge
 ### topology:
-mongod:  x2 r5d.2xlarge: 64 GiB of memory, 8 vCPUs, 1 x 150 NVMe SSD, 64-bit platform
-mongos:  x1 c5.4xlarge => c5.c5.9xlarge: 72 GiB of Memory, 36 vCPUs, EBS only, 64-bit platform
-config:  x1 x1 t3.small: t3.small, 2 GiB of Memory, 2 vCPUs, EBS only, 64-bit platform 
-
+* mongod:  x2 r5d.2xlarge: 64 GiB of memory, 8 vCPUs, 1 x 150 NVMe SSD, 64-bit platform
+* mongos:  x1 c5.4xlarge => c5.c5.9xlarge: 72 GiB of Memory, 36 vCPUs, EBS only, 64-bit platform
+* config:  x1 x1 t3.small: t3.small, 2 GiB of Memory, 2 vCPUs, EBS only, 64-bit platform 
 
 stop:
 
@@ -389,10 +388,4 @@ insert query update delete getmore command flushes mapped vsize   res faults qrw
  30590    *0     *0     *0       0 30608|0       0     0B 1.58G 55.0M      0 0|0 0|0  20.7m   5.22m  105 Dec 29 14:51:36.852
  34341    *0     *0     *0       0 34328|0       0     0B 1.58G 55.0M      0 0|0 0|0  23.2m   5.86m  105 Dec 29 14:51:37.851
  33054    *0     *0     *0       0 33124|0       0     0B 1.58G 55.0M      0 0|0 0|0  22.4m   5.64m  105 Dec 29 14:51:38.858
-```
-
-
-TX:
-```go
-
 ```
