@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"syscall"
 
 	"github.com/d7561985/mongo-ab/cmd/mongo"
 	"github.com/d7561985/mongo-ab/cmd/postgres"
@@ -17,7 +18,7 @@ func main() {
 
 	go func() {
 		ch := make(chan os.Signal, 1)
-		signal.Notify(ch, os.Kill, os.Interrupt)
+		signal.Notify(ch, syscall.SIGTERM, os.Interrupt)
 
 		<-ch
 

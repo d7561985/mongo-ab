@@ -149,6 +149,9 @@ resource "aws_instance" "mongo" {
   }
 
   user_data_base64 = filebase64("${path.module}/mongo.sh")
+  tags = {
+    Name = each.value
+  }
 }
 
 resource "aws_instance" "config" {
@@ -178,7 +181,7 @@ resource "aws_instance" "config" {
 }
 
 resource "aws_instance" "mongos" {
-  instance_type = "t3.small"
+  instance_type = "c5.9xlarge"
 
   #  availability_zone = "${var.AWS_REGION}a"
   subnet_id       = data.aws_subnet.default.id

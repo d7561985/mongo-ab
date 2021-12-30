@@ -135,7 +135,7 @@ func (r *Repo) setup(ctx context.Context) (*Repo, error) {
 		// user hashed
 		{Key: "key", Value: bson.D{{Key: "_id", Value: bsonx.String("hashed")}}},
 		//
-		{Key: "numInitialChunks", Value: bsonx.Int64(8192*3 - 3)},
+		{Key: "numInitialChunks", Value: bsonx.Int64(int64(8192*r.cfg.ShardNum - r.cfg.ShardNum))},
 		//
 		//{Key: "presplitHashedZones", Value: bsonx.Boolean(true)},
 	})
@@ -148,7 +148,7 @@ func (r *Repo) setup(ctx context.Context) (*Repo, error) {
 		{Key: "shardCollection", Value: bsonx.String(jc)},
 		//
 		{Key: "key", Value: bson.D{{Key: "accountId", Value: "hashed"}}},
-		{Key: "numInitialChunks", Value: bsonx.Int64(8192*3 - 3)},
+		{Key: "numInitialChunks", Value: bsonx.Int64(int64(8192*r.cfg.ShardNum - r.cfg.ShardNum))},
 		//
 		//{Key: "presplitHashedZones", Value: bsonx.Boolean(true)},
 	})
@@ -265,4 +265,8 @@ func (r *Repo) call(name PlaceHolders) {
 	if fn, ok := r.hooks[name]; ok {
 		fn()
 	}
+}
+
+func (r *Repo) Stop(ctx context.Context) {
+	_ = r.client.Disconnect(ctx)
 }

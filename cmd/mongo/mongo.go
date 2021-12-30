@@ -14,7 +14,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var dbConnect = "mongodb://3.120.251.23:50000"
+var dbConnect = "mongodb://3.67.76.232:50000"
 
 const (
 	Transaction = "tx"
@@ -36,6 +36,7 @@ const (
 	fCompression      = "compression"
 	fCompressionLevel = "compressionLevel"
 	fWriteConcernJ    = "wcJournal"
+	fShardNum         = "shards"
 )
 
 const (
@@ -50,6 +51,7 @@ const (
 	EnvCompression            = "MONGO_COMPRESSION"
 	EnvCompressionLevel       = "MONGO_COMPRESSION_LEVEL"
 	EnvWriteConcernJ          = "MONGO_WRITE_CONCERN_J"
+	EnvShards                 = "MONGO_SHARDS"
 )
 
 type mongoCommand struct{}
@@ -73,6 +75,8 @@ func New() *cli.Command {
 			&cli.StringFlag{Name: fCompression, Value: "snappy", Usage: "zlib, zstd, snappy", EnvVars: []string{EnvCompression}},
 			&cli.IntFlag{Name: fCompressionLevel, Value: 0, Usage: "zlib: max 9, zstd: max 20, snappy: not used", EnvVars: []string{EnvCompressionLevel}},
 			&cli.BoolFlag{Name: fWriteConcernJ, Value: false, EnvVars: []string{EnvWriteConcernJ}},
+
+			&cli.IntFlag{Name: fShardNum, Value: 3, EnvVars: []string{EnvShards}},
 		},
 		Action: c.Action,
 	}
@@ -105,6 +109,8 @@ func (m *mongoCommand) Action(c *cli.Context) error {
 		return errors.WithStack(err)
 	}
 
+	defer q.Stop(c.Context)
+
 	w := worker.New(&worker.Config{Threads: c.Int(fThreads)})
 
 	switch c.String(fOpt) {
@@ -118,7 +124,7 @@ func (m *mongoCommand) Action(c *cli.Context) error {
 				TransactionSet: in.TransactionSet,
 			}
 
-			return q.Insert(c.Context, jrnl)
+			return q.Insert(context.Background(), jrnl)
 		})
 	case Transaction:
 		w.Run(c.Context, func() error {
@@ -129,6 +135,8 @@ func (m *mongoCommand) Action(c *cli.Context) error {
 	default:
 		return fmt.Errorf("unsuported operation %q", c.String(fOpt))
 	}
+
+	w.Wait()
 
 	return nil
 }

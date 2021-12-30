@@ -26,11 +26,15 @@ func (c Config) GetWithDefault() *Config {
 }
 
 func New(cfg *Config) *services {
-	return &services{cfg: cfg.GetWithDefault()}
+	c := cfg.GetWithDefault()
+
+	return &services{cfg: c, ch: make(chan struct{}, c.Threads)}
 }
 
 type services struct {
 	cfg *Config
+
+	ch chan struct{}
 }
 
 func (s *services) Run(ctx context.Context, fn func() error) {
@@ -67,6 +71,7 @@ func (s *services) work(ctx context.Context, i int, c *uint, fn func() error) {
 
 	defer func() {
 		log.Printf("[%d] worker exit", i)
+		s.ch <- struct{}{}
 	}()
 
 	for {
@@ -74,7 +79,6 @@ func (s *services) work(ctx context.Context, i int, c *uint, fn func() error) {
 		case <-ctx.Done():
 			return
 		default:
-
 		}
 
 		if err := fn(); err != nil {
@@ -83,4 +87,12 @@ func (s *services) work(ctx context.Context, i int, c *uint, fn func() error) {
 
 		*c++
 	}
+}
+
+func (s *services) Wait() {
+	for i := 0; i < s.cfg.Threads; i++ {
+		<-s.ch
+	}
+
+	close(s.ch)
 }

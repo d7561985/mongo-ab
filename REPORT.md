@@ -319,3 +319,80 @@ insert query update delete getmore command flushes mapped vsize   res faults qrw
  10768    *0     *0     *0       0 32349|0       0     0B 1.62G  108M      0 0|0 0|0  15.6m   8.99m  105 Dec 28 17:23:54.694
  10941    *0     *0     *0       0 32802|0       0     0B 1.62G  108M      0 0|0 0|0  15.8m   9.12m  105 Dec 28 17:23:55.682
 ```
+
+## Test5
+increase mongod instance + 1
+
+### topology:
+mongod:  x4 r5d.xlarge: 32 GiB of memory, 4 vCPUs, 1 x 150 NVMe SSD, 64-bit platform
+mongos:  x1 c5.4xlarge: 32 GiB of Memory, 16 vCPUs, EBS only, 64-bit platform
+config:  x1 x1 t3.small: t3.small, 2 GiB of Memory, 2 vCPUs, EBS only, 64-bit platform 
+
+
+### stop
+
+INSERT:
+```
+insert query update delete getmore command flushes mapped vsize   res faults qrw arw net_in net_out conn                time
+ 35054    *0     *0     *0       0 35028|0       0     0B 1.61G 91.0M      0 0|0 0|0  23.7m   5.98m  105 Dec 29 10:02:07.672
+ 35580    *0     *0     *0       0 35605|0       0     0B 1.61G 91.0M      0 0|0 0|0  24.1m   6.07m  105 Dec 29 10:02:08.671
+ 26910    *0     *0     *0       0 26938|0       0     0B 1.61G 91.0M      0 0|0 0|0  18.2m   4.59m  105 Dec 29 10:02:09.663
+ 35530    *0     *0     *0       0 35476|0       0     0B 1.61G 91.0M      0 0|0 0|0  24.0m   6.06m  105 Dec 29 10:02:10.667
+ 28946    *0     *0     *0       0 28968|0       0     0B 1.61G 91.0M      0 0|0 0|0  19.6m   4.94m  105 Dec 29 10:02:11.677
+```
+
+## Test6
+increase mongod instance  + 2
+
+### topology:
+mongod:  x6 r5d.xlarge: 32 GiB of memory, 4 vCPUs, 1 x 150 NVMe SSD, 64-bit platform
+mongos:  x1 c5.4xlarge: 32 GiB of Memory, 16 vCPUs, EBS only, 64-bit platform
+config:  x1 x1 t3.small: t3.small, 2 GiB of Memory, 2 vCPUs, EBS only, 64-bit platform 
+
+
+### stop
+
+INSERT:
+```
+insert query update delete getmore command flushes mapped vsize   res faults qrw arw net_in net_out conn                time
+ 40261    *0     *0     *0       0 40266|0       0     0B 1.59G 74.0M      0 0|0 0|0  27.2m   6.86m  105 Dec 29 11:24:11.307
+ 39433    *0     *0     *0       0 39453|0       0     0B 1.60G 74.0M      0 0|0 0|0  26.7m   6.72m  105 Dec 29 11:24:12.324
+ 40790    *0     *0     *0       0 40762|0       0     0B 1.60G 74.0M      0 0|0 0|0  27.6m   6.95m  105 Dec 29 11:24:13.311
+ 40273    *0     *0     *0       0 40267|0       0     0B 1.60G 74.0M      0 0|0 0|0  27.2m   6.87m  105 Dec 29 11:24:14.305
+```
+
+TX:
+```
+ 15801    *0     *0     *0       0 47399|0       0     0B 1.61G 93.0M      0 0|0 0|0  22.9m   13.2m  105 Dec 29 11:26:36.310
+ 15733    *0     *0     *0       0 47224|0       0     0B 1.61G 93.0M      0 0|0 0|0  22.8m   13.1m  105 Dec 29 11:26:37.303
+ 15721    *0     *0     *0       0 47125|0       0     0B 1.61G 93.0M      0 0|0 0|0  22.7m   13.1m  105 Dec 29 11:26:38.303
+ 15550    *0     *0     *0       0 46698|0       0     0B 1.61G 93.0M      0 0|0 0|0  22.5m   13.0m  105 Dec 29 11:26:39.307
+```
+
+## Test7
+increase mongod instance = 2 instances
+mongos up to c5.9xlarge
+mongod r5d.xlarge =>r5d.2xlarge
+### topology:
+mongod:  x2 r5d.2xlarge: 64 GiB of memory, 8 vCPUs, 1 x 150 NVMe SSD, 64-bit platform
+mongos:  x1 c5.4xlarge => c5.c5.9xlarge: 72 GiB of Memory, 36 vCPUs, EBS only, 64-bit platform
+config:  x1 x1 t3.small: t3.small, 2 GiB of Memory, 2 vCPUs, EBS only, 64-bit platform 
+
+
+stop:
+
+INSERT:
+```
+insert query update delete getmore command flushes mapped vsize   res faults qrw arw net_in net_out conn                time
+ 32227    *0     *0     *0       0 32236|0       0     0B 1.58G 55.0M      0 0|0 0|0  21.8m   5.50m  105 Dec 29 14:51:34.850
+ 33789    *0     *0     *0       0 33790|0       0     0B 1.58G 55.0M      0 0|0 0|0  22.9m   5.76m  105 Dec 29 14:51:35.853
+ 30590    *0     *0     *0       0 30608|0       0     0B 1.58G 55.0M      0 0|0 0|0  20.7m   5.22m  105 Dec 29 14:51:36.852
+ 34341    *0     *0     *0       0 34328|0       0     0B 1.58G 55.0M      0 0|0 0|0  23.2m   5.86m  105 Dec 29 14:51:37.851
+ 33054    *0     *0     *0       0 33124|0       0     0B 1.58G 55.0M      0 0|0 0|0  22.4m   5.64m  105 Dec 29 14:51:38.858
+```
+
+
+TX:
+```go
+
+```

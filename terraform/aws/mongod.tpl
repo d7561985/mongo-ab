@@ -20,7 +20,7 @@ storage:
     commitIntervalMs: 100
   wiredTiger:
     engineConfig:
-      cacheSizeGB: 10
+      cacheSizeGB: 25
       directoryForIndexes: true
       journalCompressor: snappy # none
 
