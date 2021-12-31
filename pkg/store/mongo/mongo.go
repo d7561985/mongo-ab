@@ -128,6 +128,18 @@ func (r *Repo) setup(ctx context.Context) (*Repo, error) {
 		}
 	}
 
+	if err := r.initShards(ctx); err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return r, nil
+}
+
+func (r *Repo) initShards(ctx context.Context) error {
+	if r.cfg.ShardNum == 0 {
+		return nil
+	}
+
 	// sharding enable
 	lc := fmt.Sprintf("%s.%s", r.db.Name(), r.cfg.Collections.Balance)
 	res := r.client.Database("admin").RunCommand(ctx, bson.D{
@@ -140,7 +152,7 @@ func (r *Repo) setup(ctx context.Context) (*Repo, error) {
 		//{Key: "presplitHashedZones", Value: bsonx.Boolean(true)},
 	})
 	if res.Err() != nil && !strings.Contains(res.Err().Error(), "AlreadyInitialized") {
-		return nil, errors.WithStack(res.Err())
+		return errors.WithStack(res.Err())
 	}
 
 	jc := fmt.Sprintf("%s.%s", r.db.Name(), r.cfg.Collections.Journal)
@@ -154,10 +166,9 @@ func (r *Repo) setup(ctx context.Context) (*Repo, error) {
 	})
 
 	if res.Err() != nil && !strings.Contains(res.Err().Error(), "AlreadyInitialized") {
-		return nil, errors.WithStack(res.Err())
+		return errors.WithStack(res.Err())
 	}
-
-	return r, nil
+	return nil
 }
 
 func (r *Repo) Upsert(ctx context.Context, tx Transaction) (*TransactionInc, error) {
