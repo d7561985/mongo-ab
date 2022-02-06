@@ -82,7 +82,6 @@ COMMIT;
 	fmt.Println(exec.String())
 
 	return nil
-
 }
 
 func (s *Repo) UpdateTX(ctx context.Context, in changing.Transaction) (_ interface{}, err error) {

@@ -71,6 +71,10 @@ func (m *postgresCommand) Action(c *cli.Context) error {
 		return errors.WithStack(err)
 	}
 
+	if err = repo.Setup(context.Background()); err != nil {
+		return errors.WithStack(err)
+	}
+
 	w := worker.New(&worker.Config{Threads: c.Int(fThreads)})
 	switch c.String(fOpt) {
 	case Insert:
