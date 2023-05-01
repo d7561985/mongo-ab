@@ -237,11 +237,13 @@ Update from test1:
 link to SSD
 storage.dbPath: /data/mongodb
 
+```
 storage.directoryPerDB: true
 storage.journal.enabled: true
 storage.journal.commitIntervalMs: 100
 storage.wiredTiger.cacheSizeGB: 25
 storage.wiredTiger.directoryForIndexes: true
+```
 
 ### Stop
 reason: c5.large not enough, CPU 100%

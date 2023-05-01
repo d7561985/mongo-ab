@@ -181,7 +181,7 @@ resource "aws_instance" "config" {
 }
 
 resource "aws_instance" "mongos" {
-  instance_type = "c5.9xlarge"
+  instance_type = "c5.large"
 
   #  availability_zone = "${var.AWS_REGION}a"
   subnet_id       = data.aws_subnet.default.id

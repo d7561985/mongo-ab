@@ -17,7 +17,7 @@ module "init" {
   useNvME = var.useNvME
 
   # commit to back in  i3en.large
-  MONGOD_INSTANCE = "r5d.2xlarge"
+  # MONGOD_INSTANCE = "r5d.2xlarge"
   SPOT_PRICE = "0.99"
 }
 

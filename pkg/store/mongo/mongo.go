@@ -128,8 +128,10 @@ func (r *Repo) setup(ctx context.Context) (*Repo, error) {
 		}
 	}
 
-	if err := r.initShards(ctx); err != nil {
-		return nil, errors.WithStack(err)
+	if r.cfg.ShardNum > 0 {
+		if err := r.initShards(ctx); err != nil {
+			return nil, errors.WithStack(err)
+		}
 	}
 
 	return r, nil

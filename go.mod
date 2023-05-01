@@ -1,6 +1,6 @@
 module github.com/d7561985/mongo-ab
 
-go 1.17
+go 1.18
 
 require (
 	github.com/google/gofuzz v1.2.0
