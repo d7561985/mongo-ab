@@ -19,14 +19,14 @@ import (
 )
 
 var cfg = config.Mongo{
-	Addr: "mongodb://3.124.194.75:50000",
+	Addr: "mongodb://127.0.0.1:27017",
 	DB:   "db",
 	Collections: struct {
 		Balance string
 		Journal string
 	}{
-		Balance: "balance",
-		Journal: "journal",
+		Balance: "bench_balance",
+		Journal: "bench_journal",
 	},
 	WriteConcernJournal: false,
 }

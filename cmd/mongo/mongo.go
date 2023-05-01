@@ -69,14 +69,14 @@ func New() *cli.Command {
 
 			&cli.StringFlag{Name: fAddr, Value: dbConnect, EnvVars: []string{EnvMongoAddr}},
 			&cli.StringFlag{Name: fDB, Value: "db", EnvVars: []string{EnvMongoDB}},
-			&cli.StringFlag{Name: fColBalance, Value: "balance", EnvVars: []string{EnvMongoCollectionBalance}},
-			&cli.StringFlag{Name: fColJournal, Value: "journal", EnvVars: []string{ENVMongoCollectionJournal}},
+			&cli.StringFlag{Name: fColBalance, Value: "bench_balance", EnvVars: []string{EnvMongoCollectionBalance}},
+			&cli.StringFlag{Name: fColJournal, Value: "bench_journal", EnvVars: []string{ENVMongoCollectionJournal}},
 
 			&cli.StringFlag{Name: fCompression, Value: "snappy", Usage: "zlib, zstd, snappy", EnvVars: []string{EnvCompression}},
 			&cli.IntFlag{Name: fCompressionLevel, Value: 0, Usage: "zlib: max 9, zstd: max 20, snappy: not used", EnvVars: []string{EnvCompressionLevel}},
 			&cli.BoolFlag{Name: fWriteConcernJ, Value: false, EnvVars: []string{EnvWriteConcernJ}},
 
-			&cli.IntFlag{Name: fShardNum, Value: 3, EnvVars: []string{EnvShards}},
+			&cli.IntFlag{Name: fShardNum, Value: 0, EnvVars: []string{EnvShards}},
 		},
 		Action: c.Action,
 	}
