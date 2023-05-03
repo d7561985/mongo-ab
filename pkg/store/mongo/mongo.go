@@ -46,10 +46,7 @@ var schema []byte
 
 func New(cfg config.Mongo) (*Repo, error) {
 	clientOpts := options.Client().ApplyURI(cfg.Addr).
-		SetWriteConcern(writeconcern.New(
-			writeconcern.WTimeout(timeout),
-			writeconcern.J(false),
-		)).SetRetryWrites(true).
+		SetRetryWrites(true).
 		SetCompressors([]string{cfg.Compression.Type})
 
 	if cfg.WriteConcert.Enabled {
