@@ -40,6 +40,7 @@ const (
 	fWriteConcernJ    = "J"
 	fShardNum         = "shards"
 	fIndexes          = "index"
+	fValidation       = "validation"
 )
 
 const (
@@ -83,6 +84,7 @@ func New() *cli.Command {
 
 			&cli.IntFlag{Name: fShardNum, Value: 0, EnvVars: []string{EnvShards}},
 			&cli.StringFlag{Name: fIndexes, Value: "hashed"},
+			&cli.BoolFlag{Name: fValidation, Value: true, Aliases: []string{"v"}, Usage: "Schema validation"},
 		},
 		Action: c.Action,
 	}
@@ -90,9 +92,10 @@ func New() *cli.Command {
 
 func getCfg(c *cli.Context) config.Mongo {
 	return config.Mongo{
-		Addr:    c.String(fAddr),
-		DB:      c.String(fDB),
-		Indexes: c.String(fIndexes),
+		Addr:       c.String(fAddr),
+		DB:         c.String(fDB),
+		Indexes:    c.String(fIndexes),
+		Validation: c.Bool(fValidation),
 		Collections: struct {
 			Balance string
 			Journal string

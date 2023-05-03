@@ -103,41 +103,43 @@ func (r *Repo) setup(ctx context.Context) (*Repo, error) {
 		return nil, fmt.Errorf("index %s not supported", r.cfg.Indexes)
 	}
 
-	var doc bson.Raw
-	if err := bson.UnmarshalExtJSON(schema, true, &doc); err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	list, err := r.db.ListCollectionNames(ctx, bson.D{{Key: "name", Value: r.cfg.Collections.Balance}})
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	// WARNING: NOT EXECUTE ON PROD DATA! Will block it!
-	//
-	// level: off, strict, moderate
-	// validation setup
-	//https://docs.mongodb.com/manual/core/schema-validation/
-	if len(list) == 0 {
-		createOpts := options.CreateCollection().
-			SetValidationAction("error").
-			SetValidationLevel("strict").
-			SetValidator(bson.M{"$jsonSchema": doc})
-
-		if err := r.db.CreateCollection(ctx, r.cfg.Collections.Balance, createOpts); err != nil {
+	if r.cfg.Validation {
+		var doc bson.Raw
+		if err := bson.UnmarshalExtJSON(schema, true, &doc); err != nil {
 			return nil, errors.WithStack(err)
 		}
 
-	} else {
-		// spec: https://docs.mongodb.com/manual/reference/command/collMod/#mongodb-dbcommand-dbcmd.collMod
-		res := r.db.RunCommand(ctx, bson.D{
-			{Key: "collMod", Value: bsonx.String(r.cfg.Collections.Balance)},
-			{Key: "validationLevel", Value: bsonx.String("off")},
-			{Key: "validationAction", Value: bsonx.String("error")},
-			{Key: "validator", Value: bson.M{"$jsonSchema": doc}},
-		})
-		if res.Err() != nil {
-			return nil, errors.WithStack(res.Err())
+		list, err := r.db.ListCollectionNames(ctx, bson.D{{Key: "name", Value: r.cfg.Collections.Balance}})
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+
+		// WARNING: NOT EXECUTE ON PROD DATA! Will block it!
+		//
+		// level: off, strict, moderate
+		// validation setup
+		//https://docs.mongodb.com/manual/core/schema-validation/
+		if len(list) == 0 {
+			createOpts := options.CreateCollection().
+				SetValidationAction("error").
+				SetValidationLevel("strict").
+				SetValidator(bson.M{"$jsonSchema": doc})
+
+			if err := r.db.CreateCollection(ctx, r.cfg.Collections.Balance, createOpts); err != nil {
+				return nil, errors.WithStack(err)
+			}
+
+		} else {
+			// spec: https://docs.mongodb.com/manual/reference/command/collMod/#mongodb-dbcommand-dbcmd.collMod
+			res := r.db.RunCommand(ctx, bson.D{
+				{Key: "collMod", Value: bsonx.String(r.cfg.Collections.Balance)},
+				{Key: "validationLevel", Value: bsonx.String("off")},
+				{Key: "validationAction", Value: bsonx.String("error")},
+				{Key: "validator", Value: bson.M{"$jsonSchema": doc}},
+			})
+			if res.Err() != nil {
+				return nil, errors.WithStack(res.Err())
+			}
 		}
 	}
 
