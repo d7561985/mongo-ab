@@ -24,7 +24,11 @@ type Mongo struct {
 		Level int
 	}
 
-	WriteConcernJournal bool
+	WriteConcert struct {
+		Enabled bool
+		Journal bool
+		W       int
+	}
 }
 
 type Postgres struct {

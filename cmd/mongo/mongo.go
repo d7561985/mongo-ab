@@ -35,7 +35,9 @@ const (
 	fColJournal       = "journal"
 	fCompression      = "compression"
 	fCompressionLevel = "compressionLevel"
-	fWriteConcernJ    = "wcJournal"
+	fWriteConcern     = "wc"
+	fWriteConcernW    = "W"
+	fWriteConcernJ    = "J"
 	fShardNum         = "shards"
 )
 
@@ -74,7 +76,9 @@ func New() *cli.Command {
 
 			&cli.StringFlag{Name: fCompression, Value: "snappy", Usage: "zlib, zstd, snappy", EnvVars: []string{EnvCompression}},
 			&cli.IntFlag{Name: fCompressionLevel, Value: 0, Usage: "zlib: max 9, zstd: max 20, snappy: not used", EnvVars: []string{EnvCompressionLevel}},
-			&cli.BoolFlag{Name: fWriteConcernJ, Value: false, EnvVars: []string{EnvWriteConcernJ}},
+			&cli.BoolFlag{Name: fWriteConcernJ, Value: false, EnvVars: []string{EnvWriteConcernJ}, Usage: "Write Concern Journal confirmation"},
+			&cli.IntFlag{Name: fWriteConcernW, Value: 0, Usage: "Write concert W confirmation"},
+			&cli.BoolFlag{Name: fWriteConcern, Value: true, Usage: "Enable Write concern feature"},
 
 			&cli.IntFlag{Name: fShardNum, Value: 0, EnvVars: []string{EnvShards}},
 		},
@@ -97,7 +101,11 @@ func getCfg(c *cli.Context) config.Mongo {
 			Type  string
 			Level int
 		}{Type: c.String(fCompression), Level: c.Int(fCompressionLevel)},
-		WriteConcernJournal: c.Bool(fWriteConcernJ),
+		WriteConcert: struct {
+			Enabled bool
+			Journal bool
+			W       int
+		}{Enabled: c.Bool(fWriteConcern), Journal: c.Bool(fWriteConcernJ), W: c.Int(fWriteConcernW)},
 	}
 }
 

@@ -52,6 +52,15 @@ func New(cfg config.Mongo) (*Repo, error) {
 		)).SetRetryWrites(true).
 		SetCompressors([]string{cfg.Compression.Type})
 
+	if cfg.WriteConcert.Enabled {
+		clientOpts = clientOpts.SetWriteConcern(
+			writeconcern.New(
+				writeconcern.WTimeout(timeout),
+				writeconcern.J(cfg.WriteConcert.Journal),
+				writeconcern.W(cfg.WriteConcert.W),
+			))
+	}
+
 	switch cfg.Compression.Type {
 	case "zlib":
 		clientOpts.SetZlibLevel(cfg.Compression.Level)
