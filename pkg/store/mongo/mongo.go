@@ -80,20 +80,27 @@ func New(cfg config.Mongo) (*Repo, error) {
 }
 
 func (r *Repo) setup(ctx context.Context) (*Repo, error) {
-	// journal index
-	if _, err := r.db.Collection(r.cfg.Collections.Journal).Indexes().CreateOne(ctx, mongo.IndexModel{
-		Keys:    bson.D{bson.E{Key: "accountId", Value: "hashed"}},
-		Options: options.Index(),
-	}); err != nil {
-		return nil, errors.WithStack(err)
-	}
+	switch r.cfg.Indexes {
+	case "hashed":
+		// journal index
+		if _, err := r.db.Collection(r.cfg.Collections.Journal).Indexes().CreateOne(ctx, mongo.IndexModel{
+			Keys:    bson.D{bson.E{Key: "accountId", Value: "hashed"}},
+			Options: options.Index(),
+		}); err != nil {
+			return nil, errors.WithStack(err)
+		}
 
-	// latest index
-	if _, err := r.db.Collection(r.cfg.Collections.Balance).Indexes().CreateOne(ctx, mongo.IndexModel{
-		Keys:    bson.D{bson.E{Key: "_id", Value: "hashed"}},
-		Options: options.Index(),
-	}); err != nil {
-		return nil, errors.WithStack(err)
+		// latest index
+		if _, err := r.db.Collection(r.cfg.Collections.Balance).Indexes().CreateOne(ctx, mongo.IndexModel{
+			Keys:    bson.D{bson.E{Key: "_id", Value: "hashed"}},
+			Options: options.Index(),
+		}); err != nil {
+			return nil, errors.WithStack(err)
+		}
+	case "":
+		break
+	default:
+		return nil, fmt.Errorf("index %s not supported", r.cfg.Indexes)
 	}
 
 	var doc bson.Raw

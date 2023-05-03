@@ -6,6 +6,8 @@ type Mongo struct {
 
 	ShardNum int
 
+	Indexes string
+
 	Collections struct {
 		// for increment operation
 		Balance string

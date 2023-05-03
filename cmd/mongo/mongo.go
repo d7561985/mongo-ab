@@ -39,6 +39,7 @@ const (
 	fWriteConcernW    = "W"
 	fWriteConcernJ    = "J"
 	fShardNum         = "shards"
+	fIndexes          = "index"
 )
 
 const (
@@ -81,6 +82,7 @@ func New() *cli.Command {
 			&cli.BoolFlag{Name: fWriteConcern, Value: true, Usage: "Enable Write concern feature"},
 
 			&cli.IntFlag{Name: fShardNum, Value: 0, EnvVars: []string{EnvShards}},
+			&cli.StringFlag{Name: fIndexes, Value: "hashed"},
 		},
 		Action: c.Action,
 	}
@@ -88,8 +90,9 @@ func New() *cli.Command {
 
 func getCfg(c *cli.Context) config.Mongo {
 	return config.Mongo{
-		Addr: c.String(fAddr),
-		DB:   c.String(fDB),
+		Addr:    c.String(fAddr),
+		DB:      c.String(fDB),
+		Indexes: c.String(fIndexes),
 		Collections: struct {
 			Balance string
 			Journal string
