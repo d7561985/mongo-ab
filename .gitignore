@@ -1,2 +1,9 @@
 *pem
 .idea
+source/*
+memory-bank/*
+universal-system/*
+*.tfstate
+*.tfstate.*
+.terraform/
+**/.terraform/

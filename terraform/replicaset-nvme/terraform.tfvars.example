@@ -1,0 +1,22 @@
+# Пример конфигурации для использования spot инстансов
+
+# Включить spot инстансы (экономия до 70%)
+use_spot_instances = true
+
+# Максимальная цена за spot инстанс
+# Для i3en.2xlarge в eu-central-1:
+# - On-demand: ~$0.752/час
+# - Spot (обычно): ~$0.225-0.300/час
+spot_max_price = "0.40"  # Безопасный лимит ~50% от on-demand
+
+# Ограничить доступ только определенными IP
+allowed_ips = [
+  "YOUR_HOME_IP/32",
+  "YOUR_OFFICE_IP/32"
+]
+
+# Использовать меньший инстанс для экономии
+# instance_type = "i3en.xlarge"  # ~$0.376/час on-demand
+
+# Уменьшить размер кэша для меньших инстансов
+# cache_size_gb = 8  # Для i3en.xlarge с 16GB RAM
