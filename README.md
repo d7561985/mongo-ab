@@ -1,54 +1,237 @@
-# MongoDB-AB
+# MongoDB AB Testing Tool
 
-Some test based benchmarks which help check and understand and assess atomic operation and their RPC with different configurations
+A comprehensive benchmarking and load testing tool for MongoDB, designed to test atomic operations, transactions, and performance across different configurations.
 
-## WIP
-Repo right now proof-of-concept with purpose to build AB test utility
+## Features
 
-## Requirement
-Mongo >= 5.0 installed with shards. For custom launch look into Makefile commands that help you launch and setup on fly instance
+- **Multiple Testing Modes**: Support for both gaming/generic and financial transaction testing
+- **Atomic Operations**: Test MongoDB atomic operations with various patterns
+- **Configurable Load**: Control threads, operations per second, and test duration
+- **Multiple Operations**: Support for different operation types (inserts, transactions, specific financial operations)
+- **Compression Support**: Test with different compression algorithms (snappy, zlib, zstd)
+- **Production-Ready**: Financial transaction testing with proper decimal precision
 
-## How to
-Just be sure that you specify launch url
+## Installation
 
-store/mongo/mongo_test.go
+### Requirements
+- Go 1.18+
+- MongoDB 5.0+ (with replica set or sharded cluster support)
+
+### Build
+```bash
+git clone https://github.com/d7561985/mongo-ab.git
+cd mongo-ab
+go build -o mongo-ab .
 ```
-var dbConnect = "mongodb://localhost:27021/?replicaSet=rs1"
-```
+
+## Usage
+
+### Basic MongoDB Test
+The original MongoDB testing command for generic load testing:
 
 ```bash
-Incorrect Usage: flag provided but not defined: -р
-
-NAME:
-   main mongo - 
-
-USAGE:
-   main mongo [command options] [arguments...]
-
-DESCRIPTION:
-   run mongodb compliance test which runs transactions
-
-OPTIONS:
-   --threads value, -t value    (default: 100) [$THREADS]
-   --maxUser value, -m value    (default: 100000) [$MAX_USER]
-   --operation value, -o value  What test start: tx - transaction intense, insert - only insert (default: "tx") [$OPERATION]
-   --addr value                 (default: "mongodb://3.67.76.232:50000") [$MONGO_ADDR]
-   --db value                   (default: "db") [$MONGO_DB]
-   --balance value              (default: "bench_balance") [$MONGO_COLLECTION_BALANCE]
-   --journal value              (default: "bench_journal") [$MONGO_COLLECTION_JOURNAL]
-   --compression value          zlib, zstd, snappy (default: "snappy") [$MONGO_COMPRESSION]
-   --compressionLevel value     zlib: max 9, zstd: max 20, snappy: not used (default: 0) [$MONGO_COMPRESSION_LEVEL]
-   --wcJournal                  (default: false) [$MONGO_WRITE_CONCERN_J]
-   --shards value               (default: 0) [$MONGO_SHARDS]
-   --help, -h                   show help (default: false)
-
+./mongo-ab mongo \
+  --threads 100 \
+  --maxUser 100000 \
+  --operation tx \
+  --addr "mongodb://localhost:27017"
 ```
 
-## Tests
-### `TestLoadMakeTransaction`
-This most important. It calculates actual rpc and show it
-Example: 
+#### Parameters:
+- `--threads, -t`: Number of concurrent threads (default: 100)
+- `--maxUser, -m`: Maximum user ID pool (default: 100000)
+- `--operation, -o`: Operation type: `tx` (transactions) or `insert` (default: tx)
+- `--addr`: MongoDB connection string
+- `--db`: Database name (default: db)
+- `--compression`: Compression algorithm: snappy, zlib, zstd (default: snappy)
+- `--compressionLevel`: Compression level (zlib: 0-9, zstd: 0-20)
+- `--validation, -v`: Enable schema validation
 
+### Production Financial Transaction Testing
+For testing with financial transaction patterns:
+
+```bash
+./mongo-ab mongo-production \
+  --threads 50 \
+  --maxUser 10000 \
+  --operation all \
+  --transactions-per-thread 1000 \
+  --initial-balance 1000 \
+  --addr "mongodb://localhost:27017"
 ```
-comb/sec: 7669.716911777314 duration: 60.017860541 15344
+
+#### Parameters:
+- `--threads, -t`: Number of concurrent workers
+- `--maxUser, -m`: User ID pool for testing
+- `--operation, -o`: Operation type:
+  - `all`: Mixed operations with realistic distribution
+  - `debit`: Deposit operations only
+  - `credit`: Withdrawal operations only
+  - `transfer`: Transfer operations
+  - `zero`: Zero-amount technical operations
+  - `squash`: Squash operations
+- `--transactions-per-thread`: Number of transactions per thread
+- `--initial-balance`: Starting balance for accounts
+- `--duration`: Maximum test duration
+
+### PostgreSQL Testing
+The tool also supports PostgreSQL benchmarking:
+
+```bash
+./mongo-ab postgres [options]
 ```
+
+## Test Scenarios
+
+### High Throughput Test
+```bash
+./mongo-ab mongo \
+  --threads 200 \
+  --operation insert \
+  --compression snappy \
+  --wc=false
+```
+
+### High Reliability Test
+```bash
+./mongo-ab mongo \
+  --threads 50 \
+  --operation tx \
+  --wcJournal \
+  --W 2 \
+  --compression zstd \
+  --compressionLevel 5
+```
+
+### Financial Transaction Load Test
+```bash
+./mongo-ab mongo-production \
+  --threads 100 \
+  --operation all \
+  --transactions-per-thread 5000 \
+  --duration 10m
+```
+
+### Single Operation Type Test
+```bash
+# Test only debit operations
+./mongo-ab mongo-production --operation debit --threads 50
+
+# Test only credit operations
+./mongo-ab mongo-production --operation credit --threads 50
+```
+
+## Output
+
+The tool provides real-time metrics:
+```
+📊 TPS: 112.81 | Total: 4526 | Success: 100.0% | Failed: 0
+```
+
+Final results summary:
+```
+╔══════════════════════════════════════════════╗
+║   PRODUCTION MONGODB LOAD TEST RESULTS      ║
+╠══════════════════════════════════════════════╣
+║ Duration:              5m0s                  ║
+║ Total Users:           100                   ║
+║ Total Transactions:    50000                 ║
+║ Successful:            49500                 ║
+║ Failed:                500                   ║
+║ Success Rate:          99.00%                ║
+║ Average TPS:           166.67                ║
+╚══════════════════════════════════════════════╝
+```
+
+## Configuration
+
+### Environment Variables
+All command-line parameters can also be set via environment variables:
+```bash
+export THREADS=100
+export MAX_USER=100000
+export MONGO_ADDR="mongodb://localhost:27017"
+export MONGO_DB="test_db"
+export OPERATION="all"
+```
+
+### Connection Strings
+```bash
+# Single instance
+mongodb://localhost:27017
+
+# Replica set
+mongodb://host1:27017,host2:27017,host3:27017/?replicaSet=rs0
+
+# Sharded cluster
+mongodb://mongos1:27017,mongos2:27017
+```
+
+## Architecture
+
+The project is structured as follows:
+```
+.
+├── cmd/
+│   ├── mongo/          # Original MongoDB testing command
+│   ├── mongo-production/ # Financial transaction testing
+│   └── postgres/       # PostgreSQL testing
+├── pkg/
+│   ├── store/mongo/    # MongoDB storage implementations
+│   ├── worker/         # Worker pool management
+│   └── changing/       # Transaction models
+└── internal/
+    └── config/         # Configuration structures
+```
+
+## Performance Considerations
+
+- **Thread Count**: Start with lower thread counts and increase gradually
+- **Connection Pooling**: Handled automatically by MongoDB driver
+- **Indexes**: Created automatically on first run
+- **Rate Limiting**: Controlled via transactions-per-thread parameter
+
+## Troubleshooting
+
+### Connection Issues
+- Verify MongoDB is running and accessible
+- Check connection string format
+- Ensure proper authentication if required
+
+### Low Performance
+- Check MongoDB server resources
+- Verify network latency
+- Consider adjusting thread count
+- Review MongoDB logs for slow queries
+
+### Failed Transactions
+- Failed transactions under 5% are normal (especially for credit operations)
+- Check MongoDB server logs for errors
+- Ensure sufficient initial balance for credit operations
+
+## Development
+
+### Running Tests
+```bash
+go test ./...
+```
+
+### Building for Different Platforms
+```bash
+# Linux
+GOOS=linux GOARCH=amd64 go build -o mongo-ab-linux
+
+# macOS
+GOOS=darwin GOARCH=amd64 go build -o mongo-ab-macos
+
+# Windows
+GOOS=windows GOARCH=amd64 go build -o mongo-ab.exe
+```
+
+## License
+
+[Add your license information here]
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.

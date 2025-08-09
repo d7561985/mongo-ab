@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	"github.com/d7561985/mongo-ab/cmd/mongo"
+	mongoproduction "github.com/d7561985/mongo-ab/cmd/mongo-production"
 	"github.com/d7561985/mongo-ab/cmd/postgres"
 	"github.com/urfave/cli/v2" // imports as package "cli"
 )
@@ -31,6 +32,7 @@ func main() {
 		Usage: "Compliance benchmark",
 		Commands: []*cli.Command{
 			mongo.New(),
+			mongoproduction.Command(),
 			postgres.New(),
 		},
 	}

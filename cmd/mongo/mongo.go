@@ -63,7 +63,7 @@ type mongoCommand struct{}
 func New() *cli.Command {
 	c := new(mongoCommand)
 
-	return &cli.Command{
+	cmd := &cli.Command{
 		Name:        "mongo",
 		Description: "run mongodb compliance test which runs transactions",
 		Flags: []cli.Flag{
@@ -88,6 +88,8 @@ func New() *cli.Command {
 		},
 		Action: c.Action,
 	}
+	
+	return cmd
 }
 
 func getCfg(c *cli.Context) config.Mongo {
@@ -116,6 +118,7 @@ func getCfg(c *cli.Context) config.Mongo {
 }
 
 func (m *mongoCommand) Action(c *cli.Context) error {
+	// Run original logic
 	cfg := getCfg(c)
 
 	q, err := mongo.New(cfg)
