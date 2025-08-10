@@ -439,12 +439,12 @@ func (g *ReportGenerator) getConfiguration(ctx context.Context) (ConfigInfo, err
 }
 
 func (g *ReportGenerator) getMongostat(ctx context.Context) string {
-	// Collect real-time metrics similar to mongostat using serverStatus
 	var sb strings.Builder
-	sb.WriteString("timestamp           insert query update delete getmore command dirty used flushes vsize   res qrw arw net_in net_out conn\n")
 	
 	// Collect 5 samples with 1 second interval
+	var samples []map[string]interface{}
 	var prevStats bson.M
+	
 	for i := 0; i < 5; i++ {
 		if i > 0 {
 			time.Sleep(1 * time.Second)
@@ -456,118 +456,187 @@ func (g *ReportGenerator) getMongostat(ctx context.Context) string {
 			return fmt.Sprintf("Failed to get server status: %v", err)
 		}
 		
-		// Extract metrics
-		timestamp := time.Now().Format("15:04:05")
-		
-		// Operation counters (calculate diff for rate)
-		var insertRate, queryRate, updateRate, deleteRate int64
-		if opcounters, ok := serverStatus["opcounters"].(bson.M); ok {
-			if prevStats != nil {
+		if prevStats != nil {
+			sample := make(map[string]interface{})
+			sample["timestamp"] = time.Now().Format("15:04:05")
+			
+			// Operation counters
+			if opcounters, ok := serverStatus["opcounters"].(bson.M); ok {
 				if prevOps, ok := prevStats["opcounters"].(bson.M); ok {
-					insertRate = getRate(opcounters["insert"], prevOps["insert"])
-					queryRate = getRate(opcounters["query"], prevOps["query"])
-					updateRate = getRate(opcounters["update"], prevOps["update"])
-					deleteRate = getRate(opcounters["delete"], prevOps["delete"])
+					sample["insert"] = getRate(opcounters["insert"], prevOps["insert"])
+					sample["query"] = getRate(opcounters["query"], prevOps["query"])
+					sample["update"] = getRate(opcounters["update"], prevOps["update"])
+					sample["delete"] = getRate(opcounters["delete"], prevOps["delete"])
+					sample["total_ops"] = sample["insert"].(int64) + sample["query"].(int64) + 
+						sample["update"].(int64) + sample["delete"].(int64)
 				}
 			}
-		}
-		
-		// WiredTiger cache stats
-		var cacheUsedPercent, cacheDirtyPercent float64
-		var vsize, res string
-		if wiredTiger, ok := serverStatus["wiredTiger"].(bson.M); ok {
-			if cache, ok := wiredTiger["cache"].(bson.M); ok {
-				if bytesInCache, ok := cache["bytes currently in the cache"].(int64); ok {
-					if maxBytes, ok := cache["maximum bytes configured"].(int64); ok {
-						cacheUsedPercent = float64(bytesInCache) / float64(maxBytes) * 100
+			
+			// Cache stats
+			if wiredTiger, ok := serverStatus["wiredTiger"].(bson.M); ok {
+				if cache, ok := wiredTiger["cache"].(bson.M); ok {
+					var cacheMax int64
+					if bytesInCache, ok := cache["bytes currently in the cache"].(int64); ok {
+						if maxBytes, ok := cache["maximum bytes configured"].(int64); ok {
+							cacheMax = maxBytes
+							sample["cache_used_pct"] = float64(bytesInCache) / float64(maxBytes) * 100
+							sample["cache_used_gb"] = float64(bytesInCache) / (1024 * 1024 * 1024)
+							sample["cache_max_gb"] = float64(maxBytes) / (1024 * 1024 * 1024)
+						}
+					}
+					if dirtyBytes, ok := cache["tracked dirty bytes in the cache"].(int64); ok {
+						if cacheMax > 0 {
+							sample["cache_dirty_pct"] = float64(dirtyBytes) / float64(cacheMax) * 100
+						}
 					}
 				}
-				if dirtyBytes, ok := cache["tracked dirty bytes in the cache"].(int64); ok {
-					if maxBytes, ok := cache["maximum bytes configured"].(int64); ok {
-						cacheDirtyPercent = float64(dirtyBytes) / float64(maxBytes) * 100
-					}
+			}
+			
+			// Memory stats
+			if mem, ok := serverStatus["mem"].(bson.M); ok {
+				if virtual, ok := mem["virtual"].(int32); ok {
+					sample["vsize_gb"] = float64(virtual) / 1024
+				}
+				if resident, ok := mem["resident"].(int32); ok {
+					sample["res_gb"] = float64(resident) / 1024
 				}
 			}
-		}
-		
-		// Memory stats
-		if mem, ok := serverStatus["mem"].(bson.M); ok {
-			if virtual, ok := mem["virtual"].(int32); ok {
-				vsize = fmt.Sprintf("%.1fG", float64(virtual)/1024)
+			
+			// Connection stats
+			if conn, ok := serverStatus["connections"].(bson.M); ok {
+				if current, ok := conn["current"].(int32); ok {
+					sample["connections"] = current
+				}
 			}
-			if resident, ok := mem["resident"].(int32); ok {
-				res = fmt.Sprintf("%.1fG", float64(resident)/1024)
-			}
-		}
-		
-		// Connection stats
-		var connections int32
-		if conn, ok := serverStatus["connections"].(bson.M); ok {
-			if current, ok := conn["current"].(int32); ok {
-				connections = current
-			}
-		}
-		
-		// Network stats
-		var netIn, netOut string
-		if network, ok := serverStatus["network"].(bson.M); ok {
-			if bytesIn, ok := network["bytesIn"].(int64); ok {
-				if prevStats != nil {
+			
+			// Network stats
+			if network, ok := serverStatus["network"].(bson.M); ok {
+				if bytesIn, ok := network["bytesIn"].(int64); ok {
 					if prevNet, ok := prevStats["network"].(bson.M); ok {
 						if prevBytesIn, ok := prevNet["bytesIn"].(int64); ok {
-							rate := (bytesIn - prevBytesIn) / 1024 / 1024  // MB/s
-							netIn = fmt.Sprintf("%dMB", rate)
+							sample["net_in_mb"] = float64(bytesIn-prevBytesIn) / (1024 * 1024)
 						}
 					}
 				}
-			}
-			if bytesOut, ok := network["bytesOut"].(int64); ok {
-				if prevStats != nil {
+				if bytesOut, ok := network["bytesOut"].(int64); ok {
 					if prevNet, ok := prevStats["network"].(bson.M); ok {
 						if prevBytesOut, ok := prevNet["bytesOut"].(int64); ok {
-							rate := (bytesOut - prevBytesOut) / 1024 / 1024  // MB/s
-							netOut = fmt.Sprintf("%dMB", rate)
+							sample["net_out_mb"] = float64(bytesOut-prevBytesOut) / (1024 * 1024)
 						}
 					}
 				}
 			}
-		}
-		
-		// Global lock stats
-		qrw := "0|0"
-		arw := "0|0"
-		if globalLock, ok := serverStatus["globalLock"].(bson.M); ok {
-			if currentQueue, ok := globalLock["currentQueue"].(bson.M); ok {
-				readers := getInt(currentQueue["readers"])
-				writers := getInt(currentQueue["writers"])
-				qrw = fmt.Sprintf("%d|%d", readers, writers)
+			
+			// Lock stats
+			if globalLock, ok := serverStatus["globalLock"].(bson.M); ok {
+				if currentQueue, ok := globalLock["currentQueue"].(bson.M); ok {
+					sample["queue_readers"] = getInt(currentQueue["readers"])
+					sample["queue_writers"] = getInt(currentQueue["writers"])
+				}
+				if activeClients, ok := globalLock["activeClients"].(bson.M); ok {
+					sample["active_readers"] = getInt(activeClients["readers"])
+					sample["active_writers"] = getInt(activeClients["writers"])
+				}
 			}
-			if activeClients, ok := globalLock["activeClients"].(bson.M); ok {
-				readers := getInt(activeClients["readers"])
-				writers := getInt(activeClients["writers"])
-				arw = fmt.Sprintf("%d|%d", readers, writers)
-			}
-		}
-		
-		// Format output similar to mongostat
-		if i > 0 {  // Skip first iteration as we need previous stats for rates
-			sb.WriteString(fmt.Sprintf("%-19s %6d %5d %6d %6d %7d %7s %5.1f%% %4.1f%% %7d %-7s %-5s %-3s %-3s %-6s %-7s %4d\n",
-				timestamp,
-				insertRate, queryRate, updateRate, deleteRate,
-				0, "0|0",  // getmore and command (simplified)
-				cacheDirtyPercent, cacheUsedPercent,
-				0,  // flushes
-				vsize, res,
-				qrw, arw,
-				netIn, netOut,
-				connections,
-			))
+			
+			samples = append(samples, sample)
 		}
 		
 		prevStats = serverStatus
 	}
 	
+	// Format as markdown table
+	if len(samples) > 0 {
+		sb.WriteString("| Time | Insert | Query | Update | Delete | Total Ops/sec | Cache Used | Dirty | Network In | Network Out | Connections |\n")
+		sb.WriteString("|------|--------|-------|--------|--------|--------------|------------|-------|------------|-------------|-------------|\n")
+		
+		for _, s := range samples {
+			sb.WriteString(fmt.Sprintf("| %s | %d | %d | %d | %d | **%d** | %.1f%% (%.1fGB/%.1fGB) | %.1f%% | %.1f MB/s | %.1f MB/s | %d |\n",
+				s["timestamp"],
+				getInt64OrZero(s["insert"]),
+				getInt64OrZero(s["query"]),
+				getInt64OrZero(s["update"]),
+				getInt64OrZero(s["delete"]),
+				getInt64OrZero(s["total_ops"]),
+				getFloatOrZero(s["cache_used_pct"]),
+				getFloatOrZero(s["cache_used_gb"]),
+				getFloatOrZero(s["cache_max_gb"]),
+				getFloatOrZero(s["cache_dirty_pct"]),
+				getFloatOrZero(s["net_in_mb"]),
+				getFloatOrZero(s["net_out_mb"]),
+				getIntOrZero(s["connections"]),
+			))
+		}
+		
+		sb.WriteString("\n### Key Metrics Analysis\n\n")
+		
+		// Calculate averages
+		var avgOps, avgCacheUsed, avgNetIn, avgNetOut float64
+		for _, s := range samples {
+			avgOps += float64(getInt64OrZero(s["total_ops"]))
+			avgCacheUsed += getFloatOrZero(s["cache_used_pct"])
+			avgNetIn += getFloatOrZero(s["net_in_mb"])
+			avgNetOut += getFloatOrZero(s["net_out_mb"])
+		}
+		count := float64(len(samples))
+		avgOps /= count
+		avgCacheUsed /= count
+		avgNetIn /= count
+		avgNetOut /= count
+		
+		sb.WriteString(fmt.Sprintf("* **Average Operations**: %.0f ops/sec\n", avgOps))
+		sb.WriteString(fmt.Sprintf("* **Average Cache Usage**: %.1f%%\n", avgCacheUsed))
+		sb.WriteString(fmt.Sprintf("* **Average Network In**: %.1f MB/s\n", avgNetIn))
+		sb.WriteString(fmt.Sprintf("* **Average Network Out**: %.1f MB/s\n", avgNetOut))
+		
+		// Add memory info
+		if len(samples) > 0 {
+			lastSample := samples[len(samples)-1]
+			sb.WriteString(fmt.Sprintf("* **Virtual Memory**: %.1f GB\n", getFloatOrZero(lastSample["vsize_gb"])))
+			sb.WriteString(fmt.Sprintf("* **Resident Memory**: %.1f GB\n", getFloatOrZero(lastSample["res_gb"])))
+			
+			// Add lock queue info
+			qr := getIntOrZero(lastSample["queue_readers"])
+			qw := getIntOrZero(lastSample["queue_writers"])
+			ar := getIntOrZero(lastSample["active_readers"])
+			aw := getIntOrZero(lastSample["active_writers"])
+			
+			if qr > 0 || qw > 0 {
+				sb.WriteString(fmt.Sprintf("* **Queued Operations**: %d readers, %d writers\n", qr, qw))
+			}
+			if ar > 0 || aw > 0 {
+				sb.WriteString(fmt.Sprintf("* **Active Clients**: %d readers, %d writers\n", ar, aw))
+			}
+		}
+		
+		sb.WriteString("\n")
+	}
+	
 	return sb.String()
+}
+
+func getInt64OrZero(val interface{}) int64 {
+	if v, ok := val.(int64); ok {
+		return v
+	}
+	return 0
+}
+
+func getFloatOrZero(val interface{}) float64 {
+	if v, ok := val.(float64); ok {
+		return v
+	}
+	return 0
+}
+
+func getIntOrZero(val interface{}) int {
+	if v, ok := val.(int32); ok {
+		return int(v)
+	}
+	if v, ok := val.(int); ok {
+		return v
+	}
+	return 0
 }
 
 func getRate(current, previous interface{}) int64 {
@@ -687,10 +756,9 @@ func (g *ReportGenerator) formatReport(data ReportData) string {
 
 	// Mongostat output if available
 	if data.MongostatOutput != "" {
-		sb.WriteString("## Live Performance Metrics (mongostat)\n\n")
-		sb.WriteString("```\n")
+		sb.WriteString("## Live Performance Metrics\n\n")
+		sb.WriteString("### Real-time Operations (5-second sample)\n\n")
 		sb.WriteString(data.MongostatOutput)
-		sb.WriteString("```\n")
 	}
 
 	return sb.String()
