@@ -37,6 +37,7 @@ type ReportData struct {
 	Performance      PerformanceMetrics
 	DiskUsage        []NodeDiskUsage
 	Configuration    ConfigInfo
+	MongostatOutput  string
 }
 
 type ReplicaSetInfo struct {
@@ -188,6 +189,12 @@ func (g *ReportGenerator) Generate(ctx context.Context) (string, error) {
 	config, err := g.getConfiguration(ctx)
 	if err == nil {
 		data.Configuration = config
+	}
+
+	// Collect mongostat if requested
+	if g.config.IncludeMongostat {
+		mongostatOutput := g.getMongostat(ctx)
+		data.MongostatOutput = mongostatOutput
 	}
 
 	// Format report
@@ -431,6 +438,170 @@ func (g *ReportGenerator) getConfiguration(ctx context.Context) (ConfigInfo, err
 	return config, nil
 }
 
+func (g *ReportGenerator) getMongostat(ctx context.Context) string {
+	// Collect real-time metrics similar to mongostat using serverStatus
+	var sb strings.Builder
+	sb.WriteString("timestamp           insert query update delete getmore command dirty used flushes vsize   res qrw arw net_in net_out conn\n")
+	
+	// Collect 5 samples with 1 second interval
+	var prevStats bson.M
+	for i := 0; i < 5; i++ {
+		if i > 0 {
+			time.Sleep(1 * time.Second)
+		}
+		
+		var serverStatus bson.M
+		err := g.client.Database("admin").RunCommand(ctx, bson.D{{Key: "serverStatus", Value: 1}}).Decode(&serverStatus)
+		if err != nil {
+			return fmt.Sprintf("Failed to get server status: %v", err)
+		}
+		
+		// Extract metrics
+		timestamp := time.Now().Format("15:04:05")
+		
+		// Operation counters (calculate diff for rate)
+		var insertRate, queryRate, updateRate, deleteRate int64
+		if opcounters, ok := serverStatus["opcounters"].(bson.M); ok {
+			if prevStats != nil {
+				if prevOps, ok := prevStats["opcounters"].(bson.M); ok {
+					insertRate = getRate(opcounters["insert"], prevOps["insert"])
+					queryRate = getRate(opcounters["query"], prevOps["query"])
+					updateRate = getRate(opcounters["update"], prevOps["update"])
+					deleteRate = getRate(opcounters["delete"], prevOps["delete"])
+				}
+			}
+		}
+		
+		// WiredTiger cache stats
+		var cacheUsedPercent, cacheDirtyPercent float64
+		var vsize, res string
+		if wiredTiger, ok := serverStatus["wiredTiger"].(bson.M); ok {
+			if cache, ok := wiredTiger["cache"].(bson.M); ok {
+				if bytesInCache, ok := cache["bytes currently in the cache"].(int64); ok {
+					if maxBytes, ok := cache["maximum bytes configured"].(int64); ok {
+						cacheUsedPercent = float64(bytesInCache) / float64(maxBytes) * 100
+					}
+				}
+				if dirtyBytes, ok := cache["tracked dirty bytes in the cache"].(int64); ok {
+					if maxBytes, ok := cache["maximum bytes configured"].(int64); ok {
+						cacheDirtyPercent = float64(dirtyBytes) / float64(maxBytes) * 100
+					}
+				}
+			}
+		}
+		
+		// Memory stats
+		if mem, ok := serverStatus["mem"].(bson.M); ok {
+			if virtual, ok := mem["virtual"].(int32); ok {
+				vsize = fmt.Sprintf("%.1fG", float64(virtual)/1024)
+			}
+			if resident, ok := mem["resident"].(int32); ok {
+				res = fmt.Sprintf("%.1fG", float64(resident)/1024)
+			}
+		}
+		
+		// Connection stats
+		var connections int32
+		if conn, ok := serverStatus["connections"].(bson.M); ok {
+			if current, ok := conn["current"].(int32); ok {
+				connections = current
+			}
+		}
+		
+		// Network stats
+		var netIn, netOut string
+		if network, ok := serverStatus["network"].(bson.M); ok {
+			if bytesIn, ok := network["bytesIn"].(int64); ok {
+				if prevStats != nil {
+					if prevNet, ok := prevStats["network"].(bson.M); ok {
+						if prevBytesIn, ok := prevNet["bytesIn"].(int64); ok {
+							rate := (bytesIn - prevBytesIn) / 1024 / 1024  // MB/s
+							netIn = fmt.Sprintf("%dMB", rate)
+						}
+					}
+				}
+			}
+			if bytesOut, ok := network["bytesOut"].(int64); ok {
+				if prevStats != nil {
+					if prevNet, ok := prevStats["network"].(bson.M); ok {
+						if prevBytesOut, ok := prevNet["bytesOut"].(int64); ok {
+							rate := (bytesOut - prevBytesOut) / 1024 / 1024  // MB/s
+							netOut = fmt.Sprintf("%dMB", rate)
+						}
+					}
+				}
+			}
+		}
+		
+		// Global lock stats
+		qrw := "0|0"
+		arw := "0|0"
+		if globalLock, ok := serverStatus["globalLock"].(bson.M); ok {
+			if currentQueue, ok := globalLock["currentQueue"].(bson.M); ok {
+				readers := getInt(currentQueue["readers"])
+				writers := getInt(currentQueue["writers"])
+				qrw = fmt.Sprintf("%d|%d", readers, writers)
+			}
+			if activeClients, ok := globalLock["activeClients"].(bson.M); ok {
+				readers := getInt(activeClients["readers"])
+				writers := getInt(activeClients["writers"])
+				arw = fmt.Sprintf("%d|%d", readers, writers)
+			}
+		}
+		
+		// Format output similar to mongostat
+		if i > 0 {  // Skip first iteration as we need previous stats for rates
+			sb.WriteString(fmt.Sprintf("%-19s %6d %5d %6d %6d %7d %7s %5.1f%% %4.1f%% %7d %-7s %-5s %-3s %-3s %-6s %-7s %4d\n",
+				timestamp,
+				insertRate, queryRate, updateRate, deleteRate,
+				0, "0|0",  // getmore and command (simplified)
+				cacheDirtyPercent, cacheUsedPercent,
+				0,  // flushes
+				vsize, res,
+				qrw, arw,
+				netIn, netOut,
+				connections,
+			))
+		}
+		
+		prevStats = serverStatus
+	}
+	
+	return sb.String()
+}
+
+func getRate(current, previous interface{}) int64 {
+	currVal := getInt64(current)
+	prevVal := getInt64(previous)
+	return currVal - prevVal
+}
+
+func getInt64(val interface{}) int64 {
+	switch v := val.(type) {
+	case int64:
+		return v
+	case int32:
+		return int64(v)
+	case float64:
+		return int64(v)
+	default:
+		return 0
+	}
+}
+
+func getInt(val interface{}) int {
+	switch v := val.(type) {
+	case int32:
+		return int(v)
+	case int64:
+		return int(v)
+	case float64:
+		return int(v)
+	default:
+		return 0
+	}
+}
+
 func (g *ReportGenerator) formatReport(data ReportData) string {
 	var sb strings.Builder
 
@@ -511,6 +682,15 @@ func (g *ReportGenerator) formatReport(data ReportData) string {
 		if heartbeat, ok := data.Configuration.Settings["heartbeatIntervalMillis"]; ok {
 			sb.WriteString(fmt.Sprintf("  - Heartbeat Interval: %v ms\n", heartbeat))
 		}
+	}
+	sb.WriteString("\n")
+
+	// Mongostat output if available
+	if data.MongostatOutput != "" {
+		sb.WriteString("## Live Performance Metrics (mongostat)\n\n")
+		sb.WriteString("```\n")
+		sb.WriteString(data.MongostatOutput)
+		sb.WriteString("```\n")
 	}
 
 	return sb.String()

@@ -94,6 +94,7 @@ Generate comprehensive performance and status reports:
 #### Key Features:
 - **Automatic IP Masking**: IPs are masked by default for security (`--mask-ips=true`)
 - **Comprehensive Metrics**: Replica set status, database stats, collection details, performance metrics
+- **Live Performance Monitoring**: Built-in mongostat-like metrics via `--include-mongostat` (no external tools required)
 - **SSH Integration**: Optional disk usage statistics via SSH (`--ssh-nodes ec2-user@node1`)
 - **Flexible Output**: Specify custom output path with `-o` flag
 
@@ -112,6 +113,12 @@ Generate comprehensive performance and status reports:
   --ssh-nodes ec2-user@node1 \
   --ssh-nodes ec2-user@node2 \
   --ssh-nodes ec2-user@node3
+
+# Include live performance metrics (mongostat-like)
+./mongo-ab mongo-report \
+  --addr "$MONGO_URI" \
+  --db production_test \
+  --include-mongostat
 ```
 
 ## Test Scenarios
