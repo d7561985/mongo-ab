@@ -17,9 +17,9 @@ import (
 
 // TransactionService handles financial transactions
 type TransactionService struct {
-	client     *mongo.Client
-	db         *mongo.Database
-	accounts   *mongo.Collection
+	client       *mongo.Client
+	db           *mongo.Database
+	accounts     *mongo.Collection
 	transactions *mongo.Collection
 }
 
@@ -92,7 +92,7 @@ func (s *TransactionService) CreateAccount(ctx context.Context, userExternalID, 
 // createZeroTransaction creates an initial zero transaction for account creation
 func (s *TransactionService) createZeroTransaction(ctx context.Context, accountID primitive.ObjectID, currency string) error {
 	zeroAmount, _ := primitive.ParseDecimal128("0.00")
-	
+
 	transaction := &Transaction{
 		ID:            primitive.NewObjectID(),
 		AccountID:     accountID,
@@ -200,7 +200,7 @@ func (s *TransactionService) updateBalance(ctx context.Context, accountID primit
 	}
 
 	opts := options.FindOneAndUpdate().SetReturnDocument(options.After)
-	
+
 	var account Account
 	err := s.accounts.FindOneAndUpdate(ctx, bson.M{"_id": accountID}, update, opts).Decode(&account)
 	if err != nil {

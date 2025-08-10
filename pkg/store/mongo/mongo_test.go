@@ -45,12 +45,12 @@ var cfg = config.Mongo{
 // /opt/homebrew/Cellar/mongodb-community/5.0.3/bin/mongod --port 27021 --replSet rs1 --dbpath data/data1 --bind_ip localhost
 //
 // zstd compression
-//comb/sec: 5597.7010597209655 duration: 60.051438334 11205
+// comb/sec: 5597.7010597209655 duration: 60.051438334 11205
 // data size 353M => 350_000 journal
 //
-//zlib compressor
-//comb/sec: 6736.530018293747 duration: 60.026452625 13479
-//data size 310M => 410_000 journal table
+// zlib compressor
+// comb/sec: 6736.530018293747 duration: 60.026452625 13479
+// data size 310M => 410_000 journal table
 func TestLoadMakeTransaction(t *testing.T) {
 	i := 0
 	const X = 30

@@ -41,8 +41,8 @@ type LoadTestStats struct {
 	SuccessTransactions int64
 	FailedTransactions  int64
 	TotalUsers          int64
-	StartTime          time.Time
-	EndTime            time.Time
+	StartTime           time.Time
+	EndTime             time.Time
 }
 
 // LoadTester performs load testing
@@ -125,15 +125,15 @@ func (lt *LoadTester) Run(ctx context.Context) error {
 // createAccountsForThreads creates initial accounts for testing
 func (lt *LoadTester) createAccountsForThreads(ctx context.Context) (map[int]*Account, error) {
 	accounts := make(map[int]*Account)
-	
+
 	// Create a smaller set of initial accounts (one per thread for warm-up)
 	numInitialAccounts := lt.config.NumThreads
 	if numInitialAccounts > 100 {
 		numInitialAccounts = 100 // Limit initial accounts
 	}
-	
+
 	log.Printf("📝 Creating %d initial accounts for threads...", numInitialAccounts)
-	
+
 	for i := 0; i < numInitialAccounts; i++ {
 		// Create user
 		userExternalID := fmt.Sprintf("loadtest_user_%d_%s", i, primitive.NewObjectID().Hex()[:8])
@@ -159,9 +159,9 @@ func (lt *LoadTester) createAccountsForThreads(ctx context.Context) (map[int]*Ac
 		userID := i % lt.config.MaxUserID // Use modulo to stay within MaxUserID
 		accounts[userID] = account
 		atomic.AddInt64(&lt.stats.TotalUsers, 1)
-		
+
 		// Show progress every 10 accounts
-		if (i+1) % 10 == 0 || i == numInitialAccounts-1 {
+		if (i+1)%10 == 0 || i == numInitialAccounts-1 {
 			log.Printf("  ➤ Created %d/%d initial accounts", i+1, numInitialAccounts)
 		}
 	}
@@ -174,11 +174,11 @@ func (lt *LoadTester) createAccountsForThreads(ctx context.Context) (map[int]*Ac
 func (lt *LoadTester) runThreadTransactions(ctx context.Context, threadID int, existingAccounts map[int]*Account) error {
 	// Create account cache for this thread
 	accountCache := make(map[int]*Account)
-	
+
 	// Pre-create accounts for this thread (create a few accounts per thread)
 	threadAccounts := make([]*Account, 0, 10)
 	for j := 0; j < 10; j++ {
-		userID := (threadID * 10 + j) % lt.config.MaxUserID
+		userID := (threadID*10 + j) % lt.config.MaxUserID
 		account, err := lt.getOrCreateAccount(ctx, userID, existingAccounts, accountCache)
 		if err != nil {
 			log.Printf("Thread %d: failed to create account %d: %v", threadID, userID, err)
@@ -186,11 +186,11 @@ func (lt *LoadTester) runThreadTransactions(ctx context.Context, threadID int, e
 		}
 		threadAccounts = append(threadAccounts, account)
 	}
-	
+
 	if len(threadAccounts) == 0 {
 		return fmt.Errorf("thread %d: no accounts created", threadID)
 	}
-	
+
 	for i := 0; i < lt.config.TransactionsPerThread; i++ {
 		select {
 		case <-ctx.Done():
@@ -198,13 +198,13 @@ func (lt *LoadTester) runThreadTransactions(ctx context.Context, threadID int, e
 		default:
 			// Select random account from thread's account pool
 			account := threadAccounts[rand.Intn(len(threadAccounts))]
-			
+
 			// Generate transaction based on operation type
 			tx := lt.generateTransaction()
-			
+
 			// Execute transaction
 			_, err := lt.service.CreateTransaction(ctx, account.ID, tx.amount, tx.opType)
-			
+
 			atomic.AddInt64(&lt.stats.TotalTransactions, 1)
 			if err != nil {
 				atomic.AddInt64(&lt.stats.FailedTransactions, 1)
@@ -229,25 +229,25 @@ func (lt *LoadTester) getOrCreateAccount(ctx context.Context, userID int, existi
 	if account, ok := cache[userID]; ok {
 		return account, nil
 	}
-	
+
 	// Check existing accounts
 	if account, ok := existingAccounts[userID]; ok {
 		cache[userID] = account
 		return account, nil
 	}
-	
+
 	// Create new account
 	userExternalID := fmt.Sprintf("loadtest_user_%d_%s", userID, primitive.NewObjectID().Hex()[:8])
 	user, err := lt.service.CreateUser(ctx, userExternalID)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	account, err := lt.service.CreateAccount(ctx, user.ExternalID, "USD", AccountTypePrimary)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Add initial balance if configured
 	if lt.config.InitialBalance > 0 {
 		_, err = lt.service.CreateTransaction(ctx, account.ID, lt.config.InitialBalance, OperationTypeDebit)
@@ -255,7 +255,7 @@ func (lt *LoadTester) getOrCreateAccount(ctx context.Context, userID int, existi
 			return nil, err
 		}
 	}
-	
+
 	cache[userID] = account
 	atomic.AddInt64(&lt.stats.TotalUsers, 1)
 	return account, nil
@@ -305,23 +305,23 @@ func (lt *LoadTester) generateTransaction() transactionInfo {
 	if lt.config.Operation != "all" {
 		return lt.generateSpecificTransaction(lt.config.Operation)
 	}
-	
+
 	// Random distribution for "all"
 	r := rand.Float32()
-	
+
 	switch {
 	case r < 0.40: // 40% deposits (debit)
 		return transactionInfo{
 			amount: rand.Float64()*990 + 10, // $10-$1000
 			opType: OperationTypeDebit,
 		}
-		
+
 	case r < 0.70: // 30% withdrawals (credit)
 		return transactionInfo{
 			amount: -(rand.Float64()*490 + 10), // -$10 to -$500
 			opType: OperationTypeCredit,
 		}
-		
+
 	case r < 0.85: // 15% transfers
 		amount := rand.Float64()*200 - 100 // -$100 to $100
 		if amount > 0 {
@@ -334,13 +334,13 @@ func (lt *LoadTester) generateTransaction() transactionInfo {
 			amount: amount,
 			opType: OperationTypeCredit,
 		}
-		
+
 	case r < 0.95: // 10% small transactions
 		return transactionInfo{
 			amount: rand.Float64()*9 + 1, // $1-$10
 			opType: OperationTypeDebit,
 		}
-		
+
 	default: // 5% squash operations
 		return transactionInfo{
 			amount: -(rand.Float64() * 50), // negative for squash
@@ -363,13 +363,13 @@ func (lt *LoadTester) reportStats(ctx context.Context) {
 			total := atomic.LoadInt64(&lt.stats.TotalTransactions)
 			success := atomic.LoadInt64(&lt.stats.SuccessTransactions)
 			failed := atomic.LoadInt64(&lt.stats.FailedTransactions)
-			
+
 			tps := float64(total) / elapsed
 			successRate := float64(0)
 			if total > 0 {
 				successRate = float64(success) / float64(total) * 100
 			}
-			
+
 			if total == 0 {
 				log.Printf("📊 Preparing... (creating accounts)")
 			} else {
@@ -387,10 +387,10 @@ func (lt *LoadTester) printFinalStats() {
 	success := atomic.LoadInt64(&lt.stats.SuccessTransactions)
 	failed := atomic.LoadInt64(&lt.stats.FailedTransactions)
 	users := atomic.LoadInt64(&lt.stats.TotalUsers)
-	
+
 	tps := float64(total) / duration.Seconds()
 	successRate := float64(success) / float64(total) * 100
-	
+
 	fmt.Println("\n╔══════════════════════════════════════════════╗")
 	fmt.Println("║   PRODUCTION MONGODB LOAD TEST RESULTS      ║")
 	fmt.Println("╠══════════════════════════════════════════════╣")
@@ -402,7 +402,7 @@ func (lt *LoadTester) printFinalStats() {
 	fmt.Printf("║ Success Rate:          %-21.2f%% ║\n", successRate)
 	fmt.Printf("║ Average TPS:           %-22.2f ║\n", tps)
 	fmt.Println("╚══════════════════════════════════════════════╝")
-	
+
 	fmt.Println("\n📈 Transaction Distribution:")
 	switch lt.config.Operation {
 	case "debit":
@@ -424,7 +424,7 @@ func (lt *LoadTester) printFinalStats() {
 	default:
 		fmt.Printf("   • 100%% %s operations\n", lt.config.Operation)
 	}
-	
+
 	if failed > 0 {
 		fmt.Printf("\n⚠️ Failed transactions may be due to insufficient balance (expected behavior)\n")
 	}
@@ -433,7 +433,7 @@ func (lt *LoadTester) printFinalStats() {
 // RunLoadTest is the main entry point for load testing
 func RunLoadTest(ctx context.Context, config *LoadTestConfig) error {
 	log.Printf("🔗 Connecting to MongoDB: %s", config.MongoDB)
-	
+
 	// Configure client options with retries and compression
 	clientOpts := options.Client().
 		ApplyURI(config.MongoDB).
@@ -442,14 +442,14 @@ func RunLoadTest(ctx context.Context, config *LoadTestConfig) error {
 		SetConnectTimeout(30 * time.Second).
 		SetServerSelectionTimeout(30 * time.Second).
 		SetSocketTimeout(60 * time.Second)
-	
+
 	// Configure compression based on settings
 	compressionTypes := []string{config.Compression}
 	if config.Compression == "" {
 		compressionTypes = []string{"snappy", "zlib", "zstd"}
 	}
 	clientOpts.SetCompressors(compressionTypes)
-	
+
 	// Set compression level if applicable
 	switch config.Compression {
 	case "zlib":
@@ -461,24 +461,24 @@ func RunLoadTest(ctx context.Context, config *LoadTestConfig) error {
 			clientOpts.SetZstdLevel(config.CompressionLevel)
 		}
 	}
-	
+
 	// Configure write concern if enabled
 	if config.WriteConcern {
 		wcOpts := []writeconcern.Option{
 			writeconcern.WTimeout(10 * time.Second),
 		}
-		
+
 		if config.WriteConcernJournal {
 			wcOpts = append(wcOpts, writeconcern.J(true))
 		}
-		
+
 		if config.WriteConcernW > 0 {
 			wcOpts = append(wcOpts, writeconcern.W(config.WriteConcernW))
 		}
-		
+
 		clientOpts.SetWriteConcern(writeconcern.New(wcOpts...))
 	}
-	
+
 	// Connect to MongoDB
 	client, err := mongo.Connect(ctx, clientOpts)
 	if err != nil {
@@ -490,12 +490,12 @@ func RunLoadTest(ctx context.Context, config *LoadTestConfig) error {
 			log.Printf("⚠️ Error disconnecting: %v", err)
 		}
 	}()
-	
+
 	// Verify connection with retry
 	log.Printf("🏓 Pinging MongoDB to verify connection...")
 	pingCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	
+
 	maxRetries := 3
 	for i := 0; i < maxRetries; i++ {
 		if err := client.Ping(pingCtx, nil); err != nil {
@@ -509,7 +509,7 @@ func RunLoadTest(ctx context.Context, config *LoadTestConfig) error {
 		break
 	}
 	log.Printf("✅ Successfully connected to MongoDB")
-	
+
 	// Get server status
 	var result bson.M
 	if err := client.Database("admin").RunCommand(ctx, bson.D{{Key: "serverStatus", Value: 1}}).Decode(&result); err == nil {
@@ -520,12 +520,12 @@ func RunLoadTest(ctx context.Context, config *LoadTestConfig) error {
 			log.Printf("🖥️ MongoDB host: %s", host)
 		}
 	}
-	
+
 	// Check if database exists and get collection info
 	dbNames, err := client.ListDatabaseNames(ctx, bson.M{"name": config.Database})
 	if err == nil && len(dbNames) > 0 {
 		log.Printf("📁 Using existing database: %s", config.Database)
-		
+
 		// List collections
 		collections, err := client.Database(config.Database).ListCollectionNames(ctx, bson.M{})
 		if err == nil && len(collections) > 0 {

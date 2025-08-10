@@ -88,7 +88,7 @@ func New() *cli.Command {
 		},
 		Action: c.Action,
 	}
-	
+
 	return cmd
 }
 

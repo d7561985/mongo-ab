@@ -136,7 +136,7 @@ func RunCommand(c *cli.Context) error {
 
 	// Validate operation type
 	validOps := map[string]bool{
-		"all": true, "debit": true, "credit": true, 
+		"all": true, "debit": true, "credit": true,
 		"transfer": true, "zero": true, "squash": true,
 	}
 	if !validOps[config.Operation] {

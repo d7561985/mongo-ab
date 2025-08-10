@@ -60,12 +60,12 @@ type DatabaseInfo struct {
 }
 
 type CollectionInfo struct {
-	Name         string
-	Count        int64
-	DataSize     float64 // in GB
-	StorageSize  float64 // in GB
-	AvgObjSize   float64
-	Indexes      []IndexInfo
+	Name        string
+	Count       int64
+	DataSize    float64 // in GB
+	StorageSize float64 // in GB
+	AvgObjSize  float64
+	Indexes     []IndexInfo
 }
 
 type IndexInfo struct {
@@ -112,11 +112,11 @@ func maskIP(ip string) string {
 	if len(parts) > 1 {
 		port = ":" + parts[1]
 	}
-	
+
 	// Create a hash of the IP for consistent masking
 	hash := md5.Sum([]byte(ipOnly))
 	hashStr := fmt.Sprintf("%x", hash)
-	
+
 	// Check if it's IPv4 or IPv6
 	ipv4Pattern := regexp.MustCompile(`^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$`)
 	if ipv4Pattern.MatchString(ipOnly) {
@@ -124,12 +124,12 @@ func maskIP(ip string) string {
 		octets := strings.Split(ipOnly, ".")
 		return fmt.Sprintf("%s.xxx.xxx.%s%s", octets[0], hashStr[:3], port)
 	}
-	
+
 	// For hostnames or other formats, partially mask
 	if len(ipOnly) > 4 {
 		return fmt.Sprintf("%s...%s%s", ipOnly[:3], hashStr[:4], port)
 	}
-	
+
 	return "masked" + port
 }
 
@@ -138,10 +138,10 @@ func (g *ReportGenerator) maskString(s string) string {
 	if !g.config.MaskIPs {
 		return s
 	}
-	
+
 	// IP address pattern
 	ipPattern := regexp.MustCompile(`(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(:\d+)?`)
-	
+
 	// Replace all IP addresses with masked versions
 	return ipPattern.ReplaceAllStringFunc(s, func(match string) string {
 		return maskIP(match)
@@ -195,7 +195,7 @@ func (g *ReportGenerator) Generate(ctx context.Context) (string, error) {
 
 func (g *ReportGenerator) getReplicaSetStatus(ctx context.Context) (ReplicaSetInfo, error) {
 	var result bson.M
-	err := g.client.Database("admin").RunCommand(ctx, bson.D{{"replSetGetStatus", 1}}).Decode(&result)
+	err := g.client.Database("admin").RunCommand(ctx, bson.D{{Key: "replSetGetStatus", Value: 1}}).Decode(&result)
 	if err != nil {
 		return ReplicaSetInfo{}, err
 	}
@@ -225,7 +225,7 @@ func (g *ReportGenerator) getReplicaSetStatus(ctx context.Context) (ReplicaSetIn
 
 func (g *ReportGenerator) getDatabaseStats(ctx context.Context) (DatabaseInfo, error) {
 	var stats bson.M
-	err := g.client.Database(g.config.Database).RunCommand(ctx, bson.D{{"dbStats", 1}}).Decode(&stats)
+	err := g.client.Database(g.config.Database).RunCommand(ctx, bson.D{{Key: "dbStats", Value: 1}}).Decode(&stats)
 	if err != nil {
 		return DatabaseInfo{}, err
 	}
@@ -255,7 +255,7 @@ func (g *ReportGenerator) getDatabaseStats(ctx context.Context) (DatabaseInfo, e
 
 func (g *ReportGenerator) getCollectionStats(ctx context.Context) ([]CollectionInfo, error) {
 	db := g.client.Database(g.config.Database)
-	
+
 	collections, err := db.ListCollectionNames(ctx, bson.M{})
 	if err != nil {
 		return nil, err
@@ -264,37 +264,37 @@ func (g *ReportGenerator) getCollectionStats(ctx context.Context) ([]CollectionI
 	var collectionInfos []CollectionInfo
 	for _, collName := range collections {
 		coll := db.Collection(collName)
-		
+
 		// Get document count (use EstimatedDocumentCount for large collections)
 		count, _ := coll.EstimatedDocumentCount(ctx)
-		
+
 		// Get collection stats
 		var stats bson.M
-		err := db.RunCommand(ctx, bson.D{{"collStats", collName}}).Decode(&stats)
-		
+		err := db.RunCommand(ctx, bson.D{{Key: "collStats", Value: collName}}).Decode(&stats)
+
 		info := CollectionInfo{
 			Name:  collName,
 			Count: count,
 		}
-		
+
 		if err == nil {
 			if size, ok := stats["size"].(int64); ok {
 				info.DataSize = float64(size) / (1024 * 1024 * 1024)
 			} else if size, ok := stats["size"].(float64); ok {
 				info.DataSize = size / (1024 * 1024 * 1024)
 			}
-			
+
 			if storageSize, ok := stats["storageSize"].(int64); ok {
 				info.StorageSize = float64(storageSize) / (1024 * 1024 * 1024)
 			} else if storageSize, ok := stats["storageSize"].(float64); ok {
 				info.StorageSize = storageSize / (1024 * 1024 * 1024)
 			}
-			
+
 			if avgObjSize, ok := stats["avgObjSize"].(float64); ok {
 				info.AvgObjSize = avgObjSize
 			}
 		}
-		
+
 		// Get indexes
 		cursor, err := coll.Indexes().List(ctx)
 		if err == nil {
@@ -307,16 +307,16 @@ func (g *ReportGenerator) getCollectionStats(ctx context.Context) ([]CollectionI
 				})
 			}
 		}
-		
+
 		collectionInfos = append(collectionInfos, info)
 	}
-	
+
 	return collectionInfos, nil
 }
 
 func (g *ReportGenerator) getPerformanceMetrics(ctx context.Context) (PerformanceMetrics, error) {
 	var serverStatus bson.M
-	err := g.client.Database("admin").RunCommand(ctx, bson.D{{"serverStatus", 1}}).Decode(&serverStatus)
+	err := g.client.Database("admin").RunCommand(ctx, bson.D{{Key: "serverStatus", Value: 1}}).Decode(&serverStatus)
 	if err != nil {
 		return PerformanceMetrics{}, err
 	}
@@ -363,17 +363,17 @@ func (g *ReportGenerator) getPerformanceMetrics(ctx context.Context) (Performanc
 
 func (g *ReportGenerator) getDiskUsage(ctx context.Context) []NodeDiskUsage {
 	var diskUsages []NodeDiskUsage
-	
+
 	for _, node := range g.config.SSHNodes {
 		// Run df and du commands via SSH
-		cmd := exec.CommandContext(ctx, "ssh", "-o", "StrictHostKeyChecking=no", "-o", "ConnectTimeout=5", 
+		cmd := exec.CommandContext(ctx, "ssh", "-o", "StrictHostKeyChecking=no", "-o", "ConnectTimeout=5",
 			"-i", "~/.ssh/id_rsa", node, "df -h /data && sudo du -sh /data/mongodb")
-		
+
 		output, err := cmd.Output()
 		if err == nil {
 			lines := strings.Split(string(output), "\n")
 			usage := NodeDiskUsage{NodeAddress: node}
-			
+
 			// Parse df output
 			if len(lines) > 1 {
 				fields := strings.Fields(lines[1])
@@ -382,7 +382,7 @@ func (g *ReportGenerator) getDiskUsage(ctx context.Context) []NodeDiskUsage {
 					usage.Available = fields[3]
 				}
 			}
-			
+
 			// Parse du output
 			if len(lines) > 2 {
 				fields := strings.Fields(lines[2])
@@ -390,20 +390,20 @@ func (g *ReportGenerator) getDiskUsage(ctx context.Context) []NodeDiskUsage {
 					usage.DataSize = fields[0]
 				}
 			}
-			
+
 			diskUsages = append(diskUsages, usage)
 		}
 	}
-	
+
 	return diskUsages
 }
 
 func (g *ReportGenerator) getConfiguration(ctx context.Context) (ConfigInfo, error) {
 	config := ConfigInfo{}
-	
+
 	// Get replica set config
 	var rsConfig bson.M
-	err := g.client.Database("admin").RunCommand(ctx, bson.D{{"replSetGetConfig", 1}}).Decode(&rsConfig)
+	err := g.client.Database("admin").RunCommand(ctx, bson.D{{Key: "replSetGetConfig", Value: 1}}).Decode(&rsConfig)
 	if err == nil {
 		if cfg, ok := rsConfig["config"].(bson.M); ok {
 			if settings, ok := cfg["settings"].(bson.M); ok {
@@ -411,10 +411,10 @@ func (g *ReportGenerator) getConfiguration(ctx context.Context) (ConfigInfo, err
 			}
 		}
 	}
-	
+
 	// Try to get cache size from server status
 	var serverStatus bson.M
-	err = g.client.Database("admin").RunCommand(ctx, bson.D{{"serverStatus", 1}}).Decode(&serverStatus)
+	err = g.client.Database("admin").RunCommand(ctx, bson.D{{Key: "serverStatus", Value: 1}}).Decode(&serverStatus)
 	if err == nil {
 		if wiredTiger, ok := serverStatus["wiredTiger"].(bson.M); ok {
 			if cache, ok := wiredTiger["cache"].(bson.M); ok {
@@ -424,17 +424,17 @@ func (g *ReportGenerator) getConfiguration(ctx context.Context) (ConfigInfo, err
 			}
 		}
 	}
-	
+
 	return config, nil
 }
 
 func (g *ReportGenerator) formatReport(data ReportData) string {
 	var sb strings.Builder
-	
+
 	// Header
 	sb.WriteString(fmt.Sprintf("# MongoDB Performance Report\n\n"))
 	sb.WriteString(fmt.Sprintf("## Generated: %s\n\n", data.Timestamp.Format("2006-01-02 15:04:05")))
-	
+
 	// Replica Set Status
 	sb.WriteString("## Replica Set Status\n\n")
 	sb.WriteString(fmt.Sprintf("**Replica Set Name**: %s\n\n", data.ReplicaSetStatus.Name))
@@ -445,7 +445,7 @@ func (g *ReportGenerator) formatReport(data ReportData) string {
 		sb.WriteString(fmt.Sprintf("| %s | %s | %.0f |\n", nodeName, member.State, member.Health))
 	}
 	sb.WriteString("\n")
-	
+
 	// Database Stats
 	sb.WriteString("## Database Statistics\n\n")
 	sb.WriteString(fmt.Sprintf("**Database**: %s\n\n", data.DatabaseStats.Name))
@@ -454,7 +454,7 @@ func (g *ReportGenerator) formatReport(data ReportData) string {
 	sb.WriteString(fmt.Sprintf("- **Index Size**: %.2f GB\n", data.DatabaseStats.IndexSize))
 	sb.WriteString(fmt.Sprintf("- **Collections**: %d\n", data.DatabaseStats.Collections))
 	sb.WriteString(fmt.Sprintf("- **Indexes**: %d\n\n", data.DatabaseStats.Indexes))
-	
+
 	// Collections
 	sb.WriteString("## Collections\n\n")
 	for _, coll := range data.Collections {
@@ -469,7 +469,7 @@ func (g *ReportGenerator) formatReport(data ReportData) string {
 		}
 		sb.WriteString("\n")
 	}
-	
+
 	// Performance Metrics
 	sb.WriteString("## Performance Metrics\n\n")
 	sb.WriteString("### Operation Counters (Cumulative)\n")
@@ -477,13 +477,13 @@ func (g *ReportGenerator) formatReport(data ReportData) string {
 	sb.WriteString(fmt.Sprintf("- **Queries**: %d\n", data.Performance.QueryRate))
 	sb.WriteString(fmt.Sprintf("- **Updates**: %d\n", data.Performance.UpdateRate))
 	sb.WriteString(fmt.Sprintf("- **Deletes**: %d\n\n", data.Performance.DeleteRate))
-	
+
 	sb.WriteString("### Resource Usage\n")
-	sb.WriteString(fmt.Sprintf("- **Cache Usage**: %.2f GB / %.2f GB (%.1f%%)\n", 
-		data.Performance.CacheUsage, data.Performance.CacheMax, 
+	sb.WriteString(fmt.Sprintf("- **Cache Usage**: %.2f GB / %.2f GB (%.1f%%)\n",
+		data.Performance.CacheUsage, data.Performance.CacheMax,
 		(data.Performance.CacheUsage/data.Performance.CacheMax)*100))
 	sb.WriteString(fmt.Sprintf("- **Connections**: %d\n\n", data.Performance.Connections))
-	
+
 	// Disk Usage
 	if len(data.DiskUsage) > 0 {
 		sb.WriteString("## Disk Usage\n\n")
@@ -491,12 +491,12 @@ func (g *ReportGenerator) formatReport(data ReportData) string {
 		sb.WriteString("|------|--------------|------------|-----------||\n")
 		for _, disk := range data.DiskUsage {
 			nodeAddr := g.maskString(disk.NodeAddress)
-			sb.WriteString(fmt.Sprintf("| %s | %s | %s | %s |\n", 
+			sb.WriteString(fmt.Sprintf("| %s | %s | %s | %s |\n",
 				nodeAddr, disk.DataSize, disk.DiskUsage, disk.Available))
 		}
 		sb.WriteString("\n")
 	}
-	
+
 	// Configuration
 	sb.WriteString("## Configuration\n\n")
 	sb.WriteString(fmt.Sprintf("- **Cache Size**: %d GB\n", data.Configuration.CacheSizeGB))
@@ -509,6 +509,6 @@ func (g *ReportGenerator) formatReport(data ReportData) string {
 			sb.WriteString(fmt.Sprintf("  - Heartbeat Interval: %v ms\n", heartbeat))
 		}
 	}
-	
+
 	return sb.String()
 }

@@ -28,9 +28,9 @@ const (
 type Account struct {
 	ID             primitive.ObjectID   `bson:"_id,omitempty"`
 	UserExternalID string               `bson:"user_external_id"`
-	Currency       string               `bson:"currency"`       // USD, EUR, etc.
-	Balance        primitive.Decimal128 `bson:"balance"`        // MongoDB decimal for financial precision
-	Type           AccountType          `bson:"type"`           // primary or secondary
+	Currency       string               `bson:"currency"` // USD, EUR, etc.
+	Balance        primitive.Decimal128 `bson:"balance"`  // MongoDB decimal for financial precision
+	Type           AccountType          `bson:"type"`     // primary or secondary
 	IsDefault      bool                 `bson:"is_default"`
 	CreatedAt      time.Time            `bson:"created_at"`
 	UpdatedAt      time.Time            `bson:"updated_at"`
@@ -60,16 +60,16 @@ const (
 
 // Transaction represents a financial transaction
 type Transaction struct {
-	ID            primitive.ObjectID   `bson:"_id,omitempty"`
-	AccountID     primitive.ObjectID   `bson:"account_id"`
-	Amount        primitive.Decimal128 `bson:"amount"`         // Transaction amount
-	Balance       primitive.Decimal128 `bson:"balance"`        // Balance after transaction
-	UniqueHash    string               `bson:"unique_hash"`    // SHA1 for idempotency
-	Currency      string               `bson:"currency"`       // Currency code
-	OperationType OperationType        `bson:"operation_type"`
-	Comment       string               `bson:"comment"`
+	ID            primitive.ObjectID     `bson:"_id,omitempty"`
+	AccountID     primitive.ObjectID     `bson:"account_id"`
+	Amount        primitive.Decimal128   `bson:"amount"`      // Transaction amount
+	Balance       primitive.Decimal128   `bson:"balance"`     // Balance after transaction
+	UniqueHash    string                 `bson:"unique_hash"` // SHA1 for idempotency
+	Currency      string                 `bson:"currency"`    // Currency code
+	OperationType OperationType          `bson:"operation_type"`
+	Comment       string                 `bson:"comment"`
 	Extra         map[string]interface{} `bson:"extra,omitempty"`
-	CreatedAt     time.Time            `bson:"created_at"`
-	UpdatedAt     time.Time            `bson:"updated_at"`
-	Status        TransactionStatus    `bson:"status"`
+	CreatedAt     time.Time              `bson:"created_at"`
+	UpdatedAt     time.Time              `bson:"updated_at"`
+	Status        TransactionStatus      `bson:"status"`
 }
