@@ -81,6 +81,39 @@ The tool also supports PostgreSQL benchmarking:
 ./mongo-ab postgres [options]
 ```
 
+### MongoDB Report Generation
+Generate comprehensive performance and status reports:
+
+```bash
+./mongo-ab mongo-report \
+  --addr "mongodb://node1:port,node2:port,node3:port/?replicaSet=rs0" \
+  --db production_test \
+  -o reports/MONGO_REPORT.md
+```
+
+#### Key Features:
+- **Automatic IP Masking**: IPs are masked by default for security (`--mask-ips=true`)
+- **Comprehensive Metrics**: Replica set status, database stats, collection details, performance metrics
+- **SSH Integration**: Optional disk usage statistics via SSH (`--ssh-nodes ec2-user@node1`)
+- **Flexible Output**: Specify custom output path with `-o` flag
+
+#### Quick Example:
+```bash
+# Generate report with masked IPs (default)
+./mongo-ab mongo-report --addr "$MONGO_URI" --db production_test
+
+# Generate report with real IPs (for internal use)
+./mongo-ab mongo-report --addr "$MONGO_URI" --db production_test --mask-ips=false
+
+# Include disk usage stats
+./mongo-ab mongo-report \
+  --addr "$MONGO_URI" \
+  --db production_test \
+  --ssh-nodes ec2-user@node1 \
+  --ssh-nodes ec2-user@node2 \
+  --ssh-nodes ec2-user@node3
+```
+
 ## Test Scenarios
 
 ### High Throughput Test
@@ -121,14 +154,35 @@ The tool also supports PostgreSQL benchmarking:
 ./mongo-ab mongo-production --operation credit --threads 50
 ```
 
+### Complete Test Workflow with Reporting
+```bash
+# 1. Generate baseline report
+./mongo-ab mongo-report --addr "$MONGO_URI" -o reports/baseline.md
+
+# 2. Run load test
+./mongo-ab mongo-production \
+  --addr "$MONGO_URI" \
+  --threads 100 \
+  --duration 5m \
+  --operation all
+
+# 3. Generate post-test report
+./mongo-ab mongo-report --addr "$MONGO_URI" -o reports/after_load.md
+
+# 4. Compare results
+diff reports/baseline.md reports/after_load.md
+```
+
 ## Output
 
-The tool provides real-time metrics:
+### Real-time Metrics
+The tool provides real-time metrics during load testing:
 ```
 📊 TPS: 112.81 | Total: 4526 | Success: 100.0% | Failed: 0
 ```
 
-Final results summary:
+### Load Test Summary
+Final results summary after test completion:
 ```
 ╔══════════════════════════════════════════════╗
 ║   PRODUCTION MONGODB LOAD TEST RESULTS      ║
@@ -141,6 +195,32 @@ Final results summary:
 ║ Success Rate:          99.00%                ║
 ║ Average TPS:           166.67                ║
 ╚══════════════════════════════════════════════╝
+```
+
+### Generated Reports
+The `mongo-report` command generates detailed Markdown reports including:
+
+- **Replica Set Status**: Node health, roles (PRIMARY/SECONDARY)
+- **Database Statistics**: Data size, storage size, index size
+- **Collection Details**: Document counts, indexes, average document size
+- **Performance Metrics**: Operation counters, cache usage, connections
+- **Disk Usage**: MongoDB data size per node (with SSH access)
+- **Configuration**: Cache settings, replica set parameters
+
+Example report output (with masked IPs):
+```markdown
+## Replica Set Status
+
+| Node | State | Health |
+|------|-------|--------|
+| 63.xxx.xxx.2ff:50000 | PRIMARY | 1 |
+| 18.xxx.xxx.e98:50000 | SECONDARY | 1 |
+| 3.xxx.xxx.c6e:50000 | SECONDARY | 1 |
+
+## Database Statistics
+- Data Size: 33.73 GB
+- Storage Size: 13.72 GB
+- Index Size: 15.09 GB
 ```
 
 ## Configuration
@@ -173,15 +253,17 @@ The project is structured as follows:
 ```
 .
 ├── cmd/
-│   ├── mongo/          # Original MongoDB testing command
+│   ├── mongo/            # Original MongoDB testing command
 │   ├── mongo-production/ # Financial transaction testing
-│   └── postgres/       # PostgreSQL testing
+│   ├── mongo-report/     # Report generation command
+│   └── postgres/         # PostgreSQL testing
 ├── pkg/
-│   ├── store/mongo/    # MongoDB storage implementations
-│   ├── worker/         # Worker pool management
-│   └── changing/       # Transaction models
-└── internal/
-    └── config/         # Configuration structures
+│   ├── store/mongo/      # MongoDB storage implementations
+│   ├── worker/           # Worker pool management
+│   └── changing/         # Transaction models
+├── internal/
+│   └── config/           # Configuration structures
+└── reports/              # Generated test reports
 ```
 
 ## Performance Considerations

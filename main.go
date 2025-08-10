@@ -9,6 +9,7 @@ import (
 
 	"github.com/d7561985/mongo-ab/cmd/mongo"
 	mongoproduction "github.com/d7561985/mongo-ab/cmd/mongo-production"
+	mongoreport "github.com/d7561985/mongo-ab/cmd/mongo-report"
 	"github.com/d7561985/mongo-ab/cmd/postgres"
 	"github.com/urfave/cli/v2" // imports as package "cli"
 )
@@ -33,6 +34,7 @@ func main() {
 		Commands: []*cli.Command{
 			mongo.New(),
 			mongoproduction.Command(),
+			mongoreport.Command(),
 			postgres.New(),
 		},
 	}
