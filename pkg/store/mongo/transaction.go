@@ -42,17 +42,17 @@ func NewTransaction(in changing.Transaction) Transaction {
 		AccountID: int64(in.AccountID),
 		// We should get incrementation operation here
 		TransactionInc: TransactionInc{
-			Balance:        in.Inc.Balance,
-			DepositCount:   int64(in.Inc.DepositCount),
-			PincoinBalance: in.Inc.PincoinBalance,
+			Balance:        in.Balance,
+			DepositCount:   int64(in.DepositCount),
+			PincoinBalance: in.PincoinBalance,
 			// not negative
-			DepositAllSum:  in.Inc.DepositAllSum,
-			PincoinsAllSum: in.Inc.PincoinsAllSum,
+			DepositAllSum:  in.DepositAllSum,
+			PincoinsAllSum: in.PincoinsAllSum,
 		},
 		TransactionSet: TransactionSet{
-			ID:                in.Set.ID,
-			TransactionType:   in.Set.TransactionType,
-			TransactionID:     int64(in.Set.TransactionID),
+			ID:                in.ID,
+			TransactionType:   in.TransactionType,
+			TransactionID:     int64(in.TransactionID),
 			TransactionIDBson: in.Set.TransactionIDBson,
 			Date:              in.Set.Date,
 			Type:              in.Set.Type,

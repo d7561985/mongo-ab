@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/md5"
 	"fmt"
+	"log"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -299,7 +300,9 @@ func (g *ReportGenerator) getCollectionStats(ctx context.Context) ([]CollectionI
 		cursor, err := coll.Indexes().List(ctx)
 		if err == nil {
 			var indexes []bson.M
-			cursor.All(ctx, &indexes)
+			if err := cursor.All(ctx, &indexes); err != nil {
+				log.Printf("Failed to get all indexes: %v", err)
+			}
 			for _, idx := range indexes {
 				info.Indexes = append(info.Indexes, IndexInfo{
 					Name: fmt.Sprintf("%v", idx["name"]),
@@ -432,7 +435,7 @@ func (g *ReportGenerator) formatReport(data ReportData) string {
 	var sb strings.Builder
 
 	// Header
-	sb.WriteString(fmt.Sprintf("# MongoDB Performance Report\n\n"))
+	sb.WriteString("# MongoDB Performance Report\n\n")
 	sb.WriteString(fmt.Sprintf("## Generated: %s\n\n", data.Timestamp.Format("2006-01-02 15:04:05")))
 
 	// Replica Set Status

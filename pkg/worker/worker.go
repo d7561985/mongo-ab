@@ -53,7 +53,7 @@ func (s *services) counter(ctx context.Context, start time.Time, counter []uint)
 		case <-ctx.Done():
 			return
 		case <-time.After(time.Second):
-			ms := time.Now().Sub(start)
+			ms := time.Since(start)
 
 			var i uint
 			for _, v := range counter {

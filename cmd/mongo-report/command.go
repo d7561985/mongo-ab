@@ -80,7 +80,11 @@ func generateReport(c *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to connect to MongoDB: %w", err)
 	}
-	defer client.Disconnect(ctx)
+	defer func() {
+		if err := client.Disconnect(ctx); err != nil {
+			log.Printf("Failed to disconnect from MongoDB: %v", err)
+		}
+	}()
 
 	// Ping to verify connection
 	if err := client.Ping(ctx, nil); err != nil {
